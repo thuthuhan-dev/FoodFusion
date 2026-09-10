@@ -10,6 +10,21 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  /* Password show / hide toggles */
+  document.querySelectorAll('[data-pw-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var wrap = btn.closest('.pw-wrap');
+      if (!wrap) return;
+      var input = wrap.querySelector('input');
+      if (!input) return;
+      var showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.classList.toggle('showing', !showing);
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      input.focus();
+    });
+  });
+
   /* Modals (Join Us + Log in).
      A trigger uses data-open-modal="<modalId>". An EMPTY value keeps the old
      behaviour and opens the Join Us modal, so existing buttons still work. */
@@ -37,6 +52,10 @@ document.addEventListener('DOMContentLoaded', function () {
     if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
   }
 
+  // Exposed so a page can auto-open a modal after a server-side redirect
+  // (e.g. login.php redirecting back with an error). See includes/footer.php.
+  window.openModalById = openModalById;
+
   document.querySelectorAll('[data-open-modal]').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
       var id = btn.getAttribute('data-open-modal') || 'joinModal';
@@ -58,6 +77,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) closeAllModals();
+  });
+
+  /* Confirm before an irreversible action (post/comment deletion). */
+  document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      if (!window.confirm(form.getAttribute('data-confirm'))) {
+        e.preventDefault();
+      }
+    });
   });
 
   /* Like / repost without reloading the page.
@@ -257,7 +285,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!trackEl) return;
     var amount = function () {
       var card = trackEl.querySelector(cardSelector);
-      return card ? card.getBoundingClientRect().width + 20 : 280;
+      if (!card) return 280;
+      // Read the real gap from CSS instead of assuming 20px — the gap
+      // shrinks on mobile, and a wrong step leaves cards half-scrolled.
+      var styles = window.getComputedStyle(trackEl);
+      var gap = parseFloat(styles.columnGap || styles.gap || '20');
+      if (isNaN(gap)) gap = 20;
+      return card.getBoundingClientRect().width + gap;
     };
     var advance = function () {
       var atEnd = trackEl.scrollLeft + trackEl.clientWidth >= trackEl.scrollWidth - 4;

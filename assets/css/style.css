@@ -175,14 +175,16 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .brand-mark {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
-  background: var(--saffron);
   display: grid;
   place-items: center;
-  color: var(--zellige-deep);
-  font-family: var(--font-label);
-  font-weight: 700;
-  font-size: 0.85rem;
+  flex-shrink: 0;
+  /* The mark is now an SVG logo, so no background or letter styling here. */
+}
+.brand-mark svg {
+  width: 30px;
+  height: 30px;
+  display: block;
+  border-radius: 8px;
 }
 
 .nav-links {
@@ -2163,23 +2165,39 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    become centred, full-size tap targets.
    ======================================================= */
 
-@media (max-width: 640px) {
-  .carousel-track {
+@media (max-width: 720px) {
+  /* BOTH tracks — the events carousel uses .carousel-track and the recipe
+     carousel uses .recipe-carousel-track. Targeting only the first is why
+     recipe cards still came out half-cut. */
+  .carousel-track,
+  .recipe-carousel-track {
     gap: 14px;
     scroll-snap-type: x mandatory;
+    scroll-padding-left: 0;
     -webkit-overflow-scrolling: touch;
   }
 
-  /* One card per screen, ~12% of the next peeking to hint at scrolling */
+  /* ONE WHOLE CARD per screen.
+     The width must subtract the flex gap, otherwise the card overflows
+     and the next one gets sliced in half at the screen edge — which is
+     exactly what "cards showing half" was. calc() keeps the maths exact
+     at any viewport width. */
   .event-card-v2,
   .event-card {
-    flex: 0 0 86%;
-  }
-  .recipe-card-h {
-    flex: 0 0 62%;
+    flex: 0 0 100%;
+    max-width: 100%;
+    scroll-snap-align: center;
   }
 
-  .event-photo { height: 170px; }
+  /* Recipe cards are small, so two fit comfortably side by side.
+     50% minus half the 14px gap = a clean two-up with no clipping. */
+  .recipe-card-h {
+    flex: 0 0 calc(50% - 7px);
+    max-width: calc(50% - 7px);
+    scroll-snap-align: center;
+  }
+
+  .event-photo { height: 180px; }
 
   .carousel-controls {
     justify-content: center;
@@ -2191,12 +2209,13 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   }
 }
 
-@media (max-width: 380px) {
-  .event-card-v2,
-  .event-card {
-    flex: 0 0 92%;
+/* Very small phones: recipe cards go one-up too, so text stays readable */
+@media (max-width: 420px) {
+  .recipe-card-h {
+    flex: 0 0 calc(72% - 7px);
+    max-width: calc(72% - 7px);
   }
-  .recipe-card-h { flex: 0 0 72%; }
+  .event-photo { height: 160px; }
 }
 
 /* =======================================================
@@ -2568,4 +2587,545 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   .ingredient-row select[name="unit_id[]"] { grid-area: unit; }
   .ingredient-row .row-remove { grid-area: rm; }
   .add-recipe-actions .btn { width: 100%; justify-content: center; }
+}
+
+/* =======================================================
+   Contact Us — login gate
+   The form stays fully visible and fillable; only sending
+   requires an account.
+   ======================================================= */
+
+.contact-login-gate {
+  border: 1px dashed rgba(31, 90, 61, 0.3);
+  border-radius: 12px;
+  background: var(--plaster);
+  padding: 18px 20px;
+}
+.contact-login-gate p {
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+.contact-login-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+@media (max-width: 480px) {
+  .contact-login-actions .btn { width: 100%; justify-content: center; }
+}
+
+/* =======================================================
+   Featured recipe cards (homepage) — whole card is a link
+   ======================================================= */
+
+.recipe-card-h-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  height: 100%;
+}
+.recipe-card-h-cta {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--saffron);
+}
+.recipe-card-h-link:hover .recipe-card-h-cta { text-decoration: underline; }
+.recipe-card-h-link:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 3px;
+  border-radius: 12px;
+}
+
+/* =======================================================
+   Post detail page (comments)
+   ======================================================= */
+
+.post-detail-wrap {
+  max-width: 780px;
+  margin-inline: auto;
+}
+.post-detail-title {
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  margin: 6px 0 16px;
+}
+.post-detail-subhead {
+  font-size: 1.05rem;
+  margin: 24px 0 14px;
+}
+.post-detail-image {
+  width: 100%;
+  max-height: 420px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 18px;
+  display: block;
+}
+
+.linked-recipe-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--plaster);
+  border: 1px solid rgba(31, 90, 61, 0.14);
+  margin-bottom: 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
+}
+.linked-recipe-banner:hover { background: var(--plaster-deep); }
+.linked-recipe-banner img {
+  width: 92px;
+  height: 92px;
+  object-fit: cover;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.linked-recipe-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+  margin-bottom: 3px;
+}
+.linked-recipe-banner strong { display: block; font-size: 1rem; margin-bottom: 5px; }
+.linked-recipe-cta { font-size: 0.82rem; font-weight: 700; color: var(--zellige); }
+
+.comments-section {
+  background: var(--white);
+  border: 1px solid rgba(31, 90, 61, 0.1);
+  border-radius: var(--radius);
+  padding: 26px;
+  margin-top: 22px;
+  box-shadow: var(--shadow-card);
+}
+.comment-form textarea {
+  width: 100%;
+  min-height: 90px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  border: 1px solid rgba(31, 90, 61, 0.22);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  background: var(--plaster);
+  resize: vertical;
+}
+.comment-form { margin-bottom: 26px; }
+
+.comment-list { display: flex; flex-direction: column; gap: 18px; }
+.comment-item { display: flex; gap: 12px; align-items: flex-start; }
+.comment-body {
+  flex: 1;
+  background: var(--plaster);
+  border-radius: 12px;
+  padding: 12px 15px;
+}
+.comment-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 5px;
+}
+.comment-body p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+@media (max-width: 560px) {
+  .comments-section { padding: 18px; }
+  .linked-recipe-banner { flex-direction: column; align-items: flex-start; }
+  .linked-recipe-banner img { width: 100%; height: 150px; }
+}
+
+/* =======================================================
+   Mission section (homepage)
+   ======================================================= */
+
+.mission-section { padding-block: 64px; }
+
+.mission-layout {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+.mission-intro h2 {
+  font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+  line-height: 1.25;
+  margin-bottom: 18px;
+  max-width: 20ch;
+}
+
+.mission-statement {
+  font-size: 1.06rem;
+  line-height: 1.7;
+  color: var(--ink);
+  font-weight: 500;
+  padding-left: 18px;
+  border-left: 3px solid var(--saffron);
+  margin-bottom: 18px;
+}
+
+.mission-body {
+  font-size: 0.96rem;
+  line-height: 1.75;
+  color: var(--ink-soft);
+  margin-bottom: 26px;
+}
+
+.mission-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.mission-values {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.mission-values li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--white);
+  border: 1px solid rgba(31, 90, 61, 0.1);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+}
+.mission-value-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--plaster);
+  color: var(--zellige-deep);
+  flex-shrink: 0;
+}
+.mission-values strong {
+  display: block;
+  font-size: 0.96rem;
+  margin-bottom: 3px;
+}
+.mission-values p {
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+@media (max-width: 900px) {
+  .mission-layout { grid-template-columns: 1fr; gap: 32px; }
+  .mission-intro h2 { max-width: none; }
+  .mission-values { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 620px) {
+  .mission-section { padding-block: 44px; }
+  .mission-values { grid-template-columns: 1fr; }
+  .mission-statement { font-size: 1rem; padding-left: 14px; }
+  .mission-actions .btn { width: 100%; justify-content: center; }
+}
+
+/* =======================================================
+   Auth modals — Join Us / Log in redesign
+   ======================================================= */
+
+.modal {
+  max-width: 440px;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Branded header band at the top of each auth modal */
+.modal-brand {
+  background: linear-gradient(165deg, var(--zellige-deep), var(--zellige));
+  padding: 30px 32px 26px;
+  text-align: center;
+  color: var(--white);
+}
+.modal-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  margin-bottom: 12px;
+}
+.modal-brand-mark svg {
+  border-radius: 12px;
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.45);
+  background: var(--white);
+  padding: 2px;
+}
+.modal-brand h2 {
+  color: var(--white);
+  font-size: 1.4rem;
+  margin: 0 0 6px;
+}
+.modal-sub {
+  font-size: 0.87rem;
+  line-height: 1.55;
+  color: rgba(255, 253, 248, 0.82);
+  margin: 0;
+  max-width: 30ch;
+  margin-inline: auto;
+}
+
+/* The form body sits below the band */
+.modal form { padding: 26px 32px 0; }
+.modal .modal-switch { padding: 0 32px 26px; margin-top: 18px; }
+.modal .form-note { padding-inline: 0; }
+
+.modal-close {
+  color: rgba(255, 253, 248, 0.9);
+  z-index: 3;
+}
+.modal-close:hover { color: var(--white); }
+
+.btn-block { width: 100%; justify-content: center; }
+
+/* Password field with a show / hide control */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap input { padding-right: 44px; width: 100%; }
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: none;
+  background: none;
+  color: var(--ink-soft);
+  cursor: pointer;
+  border-radius: 7px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.pw-toggle:hover { color: var(--zellige-deep); background: var(--plaster); }
+.pw-toggle.showing { color: var(--zellige); }
+
+/* A subtle divider above the "already a member?" line */
+.modal-switch {
+  border-top: 1px solid var(--plaster-deep);
+  padding-top: 16px;
+}
+
+@media (max-width: 460px) {
+  .modal-brand { padding: 24px 22px 20px; }
+  .modal-brand h2 { font-size: 1.2rem; }
+  .modal form { padding: 22px 22px 0; }
+  .modal .modal-switch { padding: 0 22px 22px; }
+  .field-row { grid-template-columns: 1fr; }
+}
+
+/* Small cuisine marker used where a recipe has no named author */
+.cuisine-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--plaster);
+  color: var(--zellige-deep);
+  flex-shrink: 0;
+}
+
+/* =======================================================
+   Fresh from the Kitchen cards are now real links (<a>)
+   ======================================================= */
+
+.kitchen-feature,
+.kitchen-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.kitchen-feature:hover { transform: translateY(-3px); }
+.kitchen-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-modal);
+}
+.kitchen-feature:focus-visible,
+.kitchen-card:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 3px;
+}
+
+/* =======================================================
+   Auth modal error / success banners
+   ======================================================= */
+
+.auth-error {
+  background: rgba(177, 74, 42, 0.1);
+  border: 1px solid rgba(177, 74, 42, 0.35);
+  color: #7a2e17;
+  border-radius: 10px;
+  padding: 12px 15px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+.auth-success {
+  background: rgba(63, 125, 104, 0.1);
+  border: 1px solid rgba(63, 125, 104, 0.35);
+  color: #1f5a3d;
+  border-radius: 10px;
+  padding: 12px 15px;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.post-delete-btn:hover { color: var(--paprika); }
+
+.comment-delete-form { display: inline; }
+.comment-delete-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.comment-delete-btn:hover { color: var(--paprika); }
+
+/* =======================================================
+   Account page
+   ======================================================= */
+
+.account-wrap { max-width: 1100px; margin-inline: auto; }
+
+.account-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--white);
+  border: 1px solid rgba(31, 90, 61, 0.1);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-card);
+}
+.account-avatar-lg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--zellige-deep);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  font-size: 1.3rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.account-profile-info { flex: 1; min-width: 0; }
+.account-profile-info h2 { font-size: 1.2rem; margin-bottom: 2px; }
+.account-profile-info p { font-size: 0.9rem; color: var(--ink-soft); margin-bottom: 4px; }
+.account-meta { font-size: 0.8rem; color: var(--ink-soft); }
+
+.account-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 34px;
+}
+.account-tab-btn {
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 90, 61, 0.18);
+  background: var(--white);
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.account-tab-btn:hover { background: var(--plaster); color: var(--zellige-deep); }
+.account-tab-btn .tab-count { opacity: 0.65; font-size: 0.78rem; }
+
+.account-section { margin-bottom: 50px; scroll-margin-top: 90px; }
+
+.my-post-list { display: flex; flex-direction: column; gap: 14px; }
+.my-post-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--white);
+  border: 1px solid rgba(31, 90, 61, 0.1);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-card);
+}
+.my-post-row-body { min-width: 0; }
+.my-post-row-body h3 { font-size: 1rem; margin: 8px 0 4px; }
+.my-post-row-body h3 a { color: inherit; text-decoration: none; }
+.my-post-row-body h3 a:hover { color: var(--zellige); }
+.my-post-row-body p { font-size: 0.87rem; color: var(--ink-soft); margin-bottom: 6px; }
+.my-post-delete {
+  flex-shrink: 0;
+  border: 1px solid rgba(177, 74, 42, 0.25);
+  border-radius: 999px;
+  padding: 7px 14px;
+  background: none;
+  cursor: pointer;
+}
+.my-post-delete:hover { background: rgba(177, 74, 42, 0.08); }
+
+@media (max-width: 640px) {
+  .account-profile-card { flex-wrap: wrap; }
+  .account-profile-card .btn { width: 100%; justify-content: center; }
+  .my-post-row { flex-direction: column; }
+  .my-post-delete { width: 100%; justify-content: center; }
+}
+
+/* =======================================================
+   Legal pages (Privacy / Cookie policy)
+   ======================================================= */
+
+.legal-wrap { max-width: 760px; margin-inline: auto; }
+.legal-wrap h2 { font-size: 1.15rem; margin: 32px 0 12px; }
+.legal-wrap h2:first-of-type { margin-top: 8px; }
+.legal-wrap p { font-size: 0.95rem; line-height: 1.7; color: var(--ink-soft); margin-bottom: 14px; }
+.legal-wrap .lede { font-size: 1.02rem; color: var(--ink); }
+.legal-wrap ul { margin: 0 0 14px; padding-left: 22px; }
+.legal-wrap li { font-size: 0.95rem; line-height: 1.7; color: var(--ink-soft); margin-bottom: 6px; }
+.legal-wrap a { color: var(--zellige); font-weight: 600; }
+
+.legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 20px;
+  font-size: 0.88rem;
+}
+.legal-table th, .legal-table td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--plaster-deep);
+  vertical-align: top;
+}
+.legal-table th { color: var(--zellige-deep); font-weight: 700; }
+.legal-table code {
+  background: var(--plaster);
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 560px) {
+  .legal-table { display: block; overflow-x: auto; white-space: nowrap; }
 }

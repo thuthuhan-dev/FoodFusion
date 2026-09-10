@@ -25,6 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'Your session expired before this form was submitted. Please try again.';
     }
 
+    // Anyone can READ and fill in the form, but only a logged-in member
+    // may actually send it. Checked server-side, so disabling the button
+    // in the browser is not something an attacker can bypass.
+    if (empty($_SESSION['user_id'])) {
+        $errors[] = 'Please log in or create an account before sending a message.';
+    }
+
     $old['name'] = trim($_POST['name'] ?? '');
     $old['email'] = trim($_POST['email'] ?? '');
     $old['message_type'] = $_POST['message_type'] ?? 'Enquiry';
@@ -130,7 +137,20 @@ require_once 'includes/header.php';
         <label for="message">Message</label>
         <textarea id="message" name="message" required style="min-height: 140px;"><?php echo htmlspecialchars($old['message']); ?></textarea>
       </div>
-      <button type="submit" class="btn btn-primary">Send message</button>
+      <?php if (!empty($_SESSION['user_id'])): ?>
+        <button type="submit" class="btn btn-primary">Send message</button>
+      <?php else: ?>
+        <div class="contact-login-gate">
+          <p>
+            <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;vertical-align:-2px;margin-right:6px;" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
+            You can fill this in, but you&rsquo;ll need an account to send it.
+          </p>
+          <div class="contact-login-actions">
+            <button type="button" class="btn btn-primary" data-open-modal="loginModal">Log in to send</button>
+            <button type="button" class="btn btn-ghost" data-open-modal="joinModal">Create an account</button>
+          </div>
+        </div>
+      <?php endif; ?>
     </form>
   </div>
 

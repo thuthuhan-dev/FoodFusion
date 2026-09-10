@@ -41,7 +41,7 @@ $spotlightPost = null;
 if ($pdo) {
     try {
         $stmt = $pdo->query(
-            "SELECT p.post_title, p.post_content, u.first_name
+            "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name
              FROM COMMUNITY_POST p
              JOIN USERS u ON p.user_id = u.user_id
              ORDER BY p.created_at DESC
@@ -53,7 +53,7 @@ if ($pdo) {
     }
 }
 if (!$spotlightPost) {
-    $spotlightPost = ['post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
+    $spotlightPost = ['post_id' => null, 'post_type' => 'Culinary Experience', 'post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
 }
 
 /* ---------- Popular recipes carousel ---------- */
@@ -316,7 +316,7 @@ require_once 'includes/header.php';
         $feature = $recentRecipes[0];
         $featureImg = !empty($feature['image_url']) ? $feature['image_url'] : placeholder_img('recipe-' . $feature['recipe_id'], 900, 700);
       ?>
-      <article class="kitchen-feature">
+      <a href="recipe-detail.php?id=<?php echo (int) $feature['recipe_id']; ?>" class="kitchen-feature">
         <div class="visual-bg"><img src="<?php echo htmlspecialchars($featureImg); ?>" alt="<?php echo htmlspecialchars($feature['recipe_name']); ?>" loading="lazy"></div>
         <div class="scrim"></div>
         <div class="kitchen-feature-body">
@@ -326,24 +326,32 @@ require_once 'includes/header.php';
           </div>
           <h3><?php echo htmlspecialchars($feature['recipe_name']); ?></h3>
           <p><?php echo htmlspecialchars($feature['description']); ?></p>
-          <span class="news-link" style="color: var(--saffron); font-weight: 600; display: inline-block; margin-top: 14px;">View Recipe →</span>
+          <span class="news-link" style="color: var(--saffron); font-weight: 600; display: inline-block; margin-top: 14px;">View Recipe &rarr;</span>
         </div>
-      </article>
+      </a>
 
       <div class="kitchen-side">
         <?php if (isset($recentRecipes[1])): $second = $recentRecipes[1]; ?>
-        <div class="kitchen-card">
+        <a href="recipe-detail.php?id=<?php echo (int) $second['recipe_id']; ?>" class="kitchen-card">
           <span class="badge" style="align-self: flex-start; background: rgba(31,90,61,0.08); color: var(--zellige-deep); border-color: rgba(31,90,61,0.15);">Just Added</span>
           <h3><?php echo htmlspecialchars($second['recipe_name']); ?></h3>
           <p><?php echo htmlspecialchars($second['description']); ?></p>
           <div class="author-row">
-            <span class="author-avatar">FF</span>
+            <span class="cuisine-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3v8a2 2 0 002 2h0a2 2 0 002-2V3"/><path d="M9 13v8"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9"/></svg>
+            </span>
             <span class="author-name"><?php echo htmlspecialchars($second['cuisine_name']); ?> cuisine</span>
           </div>
-        </div>
+        </a>
         <?php endif; ?>
 
-        <div class="kitchen-card dark">
+        <?php
+          $spotTab = ['Recipe' => 'recipe', 'Cooking Tip' => 'tip', 'Culinary Experience' => 'experience'][$spotlightPost['post_type'] ?? ''] ?? 'experience';
+          $spotHref = !empty($spotlightPost['post_id'])
+              ? 'post-detail.php?id=' . (int) $spotlightPost['post_id']
+              : 'community.php?tab=' . $spotTab;
+        ?>
+        <a href="<?php echo htmlspecialchars($spotHref); ?>" class="kitchen-card dark">
           <span class="quote-mark">"</span>
           <h3><?php echo htmlspecialchars($spotlightPost['post_title']); ?></h3>
           <p><?php echo htmlspecialchars($spotlightPost['post_content']); ?></p>
@@ -351,7 +359,7 @@ require_once 'includes/header.php';
             <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($spotlightPost['first_name'], 0, 2))); ?></span>
             <span class="author-name"><?php echo htmlspecialchars($spotlightPost['first_name']); ?></span>
           </div>
-        </div>
+        </a>
       </div>
     </div>
   </div>

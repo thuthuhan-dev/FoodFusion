@@ -134,6 +134,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
     exit;
 }
 
+/* ---------- Delete a post you wrote ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_post') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $postId = (int) ($_POST['post_id'] ?? 0);
+    $returnTab = $_POST['tab'] ?? 'recipe';
+    $returnTo = trim($_POST['return_to'] ?? '');
+
+    if (hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken) && !empty($_SESSION['user_id']) && $pdo && $postId > 0) {
+        try {
+            // The WHERE clause checks ownership directly in the query — this is
+            // the actual protection, not just hiding the button in the UI. If the
+            // post_id belongs to someone else, this deletes zero rows.
+            $del = $pdo->prepare('DELETE FROM COMMUNITY_POST WHERE post_id = ? AND user_id = ?');
+            $del->execute([$postId, $_SESSION['user_id']]);
+            // ON DELETE CASCADE on COMMUNITY_POST_STEP, POST_LIKE, POST_COMMENT
+            // and POST_SHARE takes care of everything attached to the post.
+        } catch (PDOException $e) {
+            error_log('FoodFusion delete_post: ' . $e->getMessage());
+        }
+    }
+
+    if ($returnTo !== '' && (str_starts_with($returnTo, 'account.php') || str_starts_with($returnTo, 'community.php'))) {
+        header('Location: ' . $returnTo);
+    } else {
+        header('Location: community.php?tab=' . urlencode($returnTab));
+    }
+    exit;
+}
+
 /* ---------- Tab counts (for the little numbers on each tab) ---------- */
 $tabCounts = ['recipe' => 0, 'tip' => 0, 'experience' => 0];
 if ($pdo) {
@@ -146,7 +175,11 @@ if ($pdo) {
             $tabCounts[$slug] = (int) $c1->fetchColumn() + (int) $c2->fetchColumn();
         }
     } catch (PDOException $e) {
-        $dbNotice = "Database error while loading tab counts: " . $e->getMessage();
+        // Never echo $e->getMessage() to the browser: raw driver errors leak
+        // table and column names, which helps an attacker map the database.
+        // The detail goes to the server log; the user sees a neutral message.
+        error_log('FoodFusion community tab counts: ' . $e->getMessage());
+        $dbNotice = 'The community cookbook is temporarily unavailable. Please try again shortly.';
     }
 }
 
@@ -237,7 +270,8 @@ if ($pdo && !$dbNotice) {
     } catch (PDOException $e) {
         $posts = [];
         $totalPosts = 0;
-        $dbNotice = "Database error while loading the feed: " . $e->getMessage();
+        error_log('FoodFusion community feed: ' . $e->getMessage());
+        $dbNotice = 'The community cookbook is temporarily unavailable. Please try again shortly.';
     }
 }
 
@@ -467,6 +501,19 @@ require_once 'includes/header.php';
                   <button type="submit" class="post-comment-link" style="<?php echo $post['reposted_by_me'] ? 'color: var(--zellige);' : ''; ?> background:none; border:none; cursor:pointer;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
                     <span class="action-label"><?php echo $post['reposted_by_me'] ? 'Reposted' : 'Repost'; ?></span>
+                  </button>
+                </form>
+              <?php endif; ?>
+
+              <?php if (empty($post['is_repost']) && !empty($_SESSION['user_id']) && (int) $post['author_id'] === (int) $_SESSION['user_id']): ?>
+                <form method="POST" action="community.php" style="display:inline; margin-left:auto;" data-confirm="Delete this post? This can't be undone.">
+                  <input type="hidden" name="action" value="delete_post">
+                  <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
+                  <input type="hidden" name="tab" value="<?php echo htmlspecialchars($activeTab); ?>">
+                  <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+                  <button type="submit" class="post-comment-link post-delete-btn">
+                    <svg viewBox="0 0 24 24" width="16" height="16" style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m2 0v13a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/></svg>
+                    Delete
                   </button>
                 </form>
               <?php endif; ?>
