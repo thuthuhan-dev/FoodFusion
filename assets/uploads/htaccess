@@ -1,0 +1,6 @@
+# Uploaded files are data, never code. Even if someone manages to store a
+# script here, Apache must not execute it.
+php_flag engine off
+<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|cgi|asp|aspx|sh)$">
+    Require all denied
+</FilesMatch>

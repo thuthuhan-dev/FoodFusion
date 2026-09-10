@@ -1,0 +1,24 @@
+# Environment and secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# Dependencies
+vendor/
+node_modules/
+
+# Backups
+backups/
+database/backups/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Database credentials
+includes/db.php
+
+# Local/tool-generated data
+.freebuff/
