@@ -79,8 +79,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
     if (hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken) && !empty($_SESSION['user_id']) && $pdo && $targetId > 0) {
         try {
-            $pdo->prepare('DELETE FROM COMMUNITY_POST WHERE post_id = ? AND user_id = ?')
-                ->execute([$targetId, $_SESSION['user_id']]);
+            $imgStmt = $pdo->prepare('SELECT image_url FROM COMMUNITY_POST WHERE post_id = ? AND user_id = ?');
+            $imgStmt->execute([$targetId, $_SESSION['user_id']]);
+            $imageToDelete = $imgStmt->fetchColumn();
+
+            $del = $pdo->prepare('DELETE FROM COMMUNITY_POST WHERE post_id = ? AND user_id = ?');
+            $del->execute([$targetId, $_SESSION['user_id']]);
+
+            if ($del->rowCount() > 0 && $imageToDelete) {
+                delete_uploaded_file($imageToDelete);
+            }
         } catch (PDOException $e) {
             error_log('FoodFusion delete_post (post-detail): ' . $e->getMessage());
         }

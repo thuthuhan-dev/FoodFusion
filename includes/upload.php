@@ -147,3 +147,42 @@ if (!function_exists('mb_strlen')) {
         return strlen(utf8_decode((string) $string));
     }
 }
+
+/**
+ * Delete an uploaded file from disk, given the value stored in the database.
+ *
+ * Safe by design:
+ *  - Does nothing for external URLs (http/https) — those were never our file
+ *    to delete in the first place.
+ *  - Only deletes paths inside UPLOAD_DIR_WEB, and only after resolving them
+ *    to a real path and confirming that real path is still inside the
+ *    uploads folder. This stops a manipulated value like
+ *    "assets/uploads/../../includes/db.php" from ever deleting something
+ *    outside the uploads directory.
+ */
+function delete_uploaded_file($stored)
+{
+    $stored = trim((string) $stored);
+    if ($stored === '') {
+        return;
+    }
+    if (preg_match('#^(https?:)?//#i', $stored)) {
+        return; // external URL, not one of our uploaded files
+    }
+    if (strpos($stored, UPLOAD_DIR_WEB . '/') !== 0) {
+        return; // not an uploads-folder path at all
+    }
+
+    $uploadsReal = realpath(UPLOAD_DIR_FS);
+    $target = __DIR__ . '/../' . $stored;
+    $targetReal = realpath($target);
+
+    if ($uploadsReal === false || $targetReal === false) {
+        return;
+    }
+    if (strpos($targetReal, $uploadsReal . DIRECTORY_SEPARATOR) !== 0) {
+        return; // resolved path escaped the uploads folder — refuse
+    }
+
+    @unlink($targetReal);
+}

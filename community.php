@@ -143,6 +143,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
     if (hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken) && !empty($_SESSION['user_id']) && $pdo && $postId > 0) {
         try {
+            // Look up the image BEFORE deleting the row — once the row is gone,
+            // there's no way to know which file belonged to it.
+            $imgStmt = $pdo->prepare('SELECT image_url FROM COMMUNITY_POST WHERE post_id = ? AND user_id = ?');
+            $imgStmt->execute([$postId, $_SESSION['user_id']]);
+            $imageToDelete = $imgStmt->fetchColumn();
+
             // The WHERE clause checks ownership directly in the query — this is
             // the actual protection, not just hiding the button in the UI. If the
             // post_id belongs to someone else, this deletes zero rows.
@@ -150,6 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
             $del->execute([$postId, $_SESSION['user_id']]);
             // ON DELETE CASCADE on COMMUNITY_POST_STEP, POST_LIKE, POST_COMMENT
             // and POST_SHARE takes care of everything attached to the post.
+
+            if ($del->rowCount() > 0 && $imageToDelete) {
+                delete_uploaded_file($imageToDelete);
+            }
         } catch (PDOException $e) {
             error_log('FoodFusion delete_post: ' . $e->getMessage());
         }
