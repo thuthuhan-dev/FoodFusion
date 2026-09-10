@@ -80,7 +80,6 @@ unset($_SESSION['auth_old']);
           </button>
           <div class="user-dropdown">
             <a href="account.php">My Account</a>
-            <a href="account.php#favorites">My Favorites</a>
             <a href="logout.php">Log out</a>
           </div>
         </div>
