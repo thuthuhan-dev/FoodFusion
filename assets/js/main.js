@@ -180,13 +180,37 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var addIngredientRow = document.getElementById('addIngredientRow');
   var ingredientRows   = document.getElementById('ingredientRows');
+
+  /* Toggle between the ingredient dropdown and a free-text field when
+     "+ Add a new ingredient…" is chosen. Delegated so it works on rows
+     cloned later by "Add another ingredient" without extra wiring. */
+  document.addEventListener('change', function (e) {
+    if (!e.target.classList || !e.target.classList.contains('ingredient-select')) return;
+    var pick = e.target.closest('.ingredient-pick');
+    if (!pick) return;
+    var nameInput = pick.querySelector('.ingredient-new-name');
+    if (!nameInput) return;
+
+    if (e.target.value === '__new__') {
+      e.target.style.display = 'none';
+      nameInput.style.display = '';
+      nameInput.focus();
+    } else {
+      e.target.style.display = '';
+      nameInput.style.display = 'none';
+      nameInput.value = '';
+    }
+  });
+
   if (addIngredientRow && ingredientRows) {
     addIngredientRow.addEventListener('click', function () {
       var first = ingredientRows.querySelector('.ingredient-row');
       if (!first) return;
       var clone = first.cloneNode(true);
-      clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+      clone.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; s.style.display = ''; });
       clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+      var clonedNameInput = clone.querySelector('.ingredient-new-name');
+      if (clonedNameInput) clonedNameInput.style.display = 'none';
       ingredientRows.appendChild(clone);
       var sel = clone.querySelector('select');
       if (sel) sel.focus();
@@ -225,7 +249,9 @@ document.addEventListener('DOMContentLoaded', function () {
       row.remove();
     } else {
       row.querySelectorAll('input').forEach(function (i) { i.value = ''; });
-      row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; });
+      row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; s.style.display = ''; });
+      var nameField = row.querySelector('.ingredient-new-name');
+      if (nameField) nameField.style.display = 'none';
     }
     renumberSteps();
   });

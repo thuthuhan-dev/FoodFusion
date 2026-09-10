@@ -16,6 +16,9 @@ $searchTerm     = isset($_GET['q']) ? trim($_GET['q']) : '';
 $page = isset($_GET['page']) && (int) $_GET['page'] > 0 ? (int) $_GET['page'] : 1;
 $perPage = 6;
 $cardMessage = null;
+if (isset($_GET['recipe_deleted'])) {
+    $cardMessage = 'Recipe deleted.';
+}
 
 /* ---------- Save (favourite) a recipe straight from the collection ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggle_favorite') {
@@ -106,22 +109,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         $rServings = (int) ($_POST['servings'] ?? 0);
         $rDietary  = array_map('intval', $_POST['dietary'] ?? []);
 
-        // Ingredient rows: only keep rows where an ingredient was actually chosen.
-        $ingIds  = $_POST['ingredient_id'] ?? [];
-        $ingQty  = $_POST['quantity'] ?? [];
-        $ingUnit = $_POST['unit_id'] ?? [];
+        // Ingredient rows: each row is either an existing ingredient (a numeric
+        // id) or a brand-new one the user typed in (id = "__new__" plus a name).
+        // Resolution of new ingredient names into real ingredient_ids happens
+        // inside the transaction below, since it needs $pdo and must roll back
+        // cleanly with everything else if anything later fails.
+        $ingIds     = $_POST['ingredient_id'] ?? [];
+        $ingNewName = $_POST['new_ingredient_name'] ?? [];
+        $ingQty     = $_POST['quantity'] ?? [];
+        $ingUnit    = $_POST['unit_id'] ?? [];
         $ingredientRows = [];
-        $seenIngredients = [];
-        foreach ($ingIds as $i => $ingId) {
-            $ingId = (int) $ingId;
-            $qty   = (float) ($ingQty[$i] ?? 0);
-            $uId   = (int) ($ingUnit[$i] ?? 0);
-            if ($ingId <= 0 || $uId <= 0 || $qty <= 0) continue;
-            // UNIQUE(recipe_id, ingredient_id) — skip a repeated ingredient
-            // rather than letting the insert fail.
-            if (isset($seenIngredients[$ingId])) continue;
-            $seenIngredients[$ingId] = true;
-            $ingredientRows[] = ['ingredient_id' => $ingId, 'quantity' => $qty, 'unit_id' => $uId];
+        foreach ($ingIds as $i => $rawId) {
+            $qty = (float) ($ingQty[$i] ?? 0);
+            $uId = (int) ($ingUnit[$i] ?? 0);
+            if ($qty <= 0 || $uId <= 0) continue;
+
+            if ($rawId === '__new__') {
+                $newName = trim($ingNewName[$i] ?? '');
+                if ($newName === '' || mb_strlen($newName) > 150) continue;
+                $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'quantity' => $qty, 'unit_id' => $uId];
+            } else {
+                $id = (int) $rawId;
+                if ($id <= 0) continue;
+                $ingredientRows[] = ['type' => 'existing', 'ingredient_id' => $id, 'quantity' => $qty, 'unit_id' => $uId];
+            }
         }
 
         $stepRows = array_values(array_filter(array_map('trim', $_POST['step'] ?? []), fn($s) => $s !== ''));
@@ -166,8 +177,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                     'INSERT INTO RECIPE_INGREDIENT (recipe_id, ingredient_id, unit_id, quantity)
                      VALUES (?, ?, ?, ?)'
                 );
+                $findIngStmt = $pdo->prepare('SELECT ingredient_id FROM INGREDIENT WHERE LOWER(ingredient_name) = LOWER(?)');
+                $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name) VALUES (?)');
+
+                $seenIngredients = [];
                 foreach ($ingredientRows as $row) {
-                    $ingStmt->execute([$newRecipeId, $row['ingredient_id'], $row['unit_id'], $row['quantity']]);
+                    if ($row['type'] === 'new') {
+                        // Re-use an existing ingredient with the same name (case-insensitive)
+                        // rather than creating a near-duplicate like "Onion" and "onion".
+                        $findIngStmt->execute([$row['name']]);
+                        $existingId = $findIngStmt->fetchColumn();
+                        if ($existingId) {
+                            $resolvedId = (int) $existingId;
+                        } else {
+                            $newIngStmt->execute([$row['name']]);
+                            $resolvedId = (int) $pdo->lastInsertId();
+                        }
+                    } else {
+                        $resolvedId = $row['ingredient_id'];
+                    }
+
+                    // UNIQUE(recipe_id, ingredient_id) — skip a repeated ingredient
+                    // (including two "new" rows that turned out to resolve to the
+                    // same existing ingredient) rather than letting the insert fail.
+                    if (isset($seenIngredients[$resolvedId])) continue;
+                    $seenIngredients[$resolvedId] = true;
+
+                    $ingStmt->execute([$newRecipeId, $resolvedId, $row['unit_id'], $row['quantity']]);
                 }
 
                 $stepStmt = $pdo->prepare(
@@ -483,12 +519,16 @@ require_once 'includes/header.php';
 
         <div id="ingredientRows">
           <div class="ingredient-row">
-            <select name="ingredient_id[]" class="ingredient-select">
-              <option value="">Choose an ingredient…</option>
-              <?php foreach ($allIngredients as $ing): ?>
-                <option value="<?php echo (int) $ing['ingredient_id']; ?>"><?php echo htmlspecialchars($ing['ingredient_name']); ?></option>
-              <?php endforeach; ?>
-            </select>
+            <div class="ingredient-pick">
+              <select name="ingredient_id[]" class="ingredient-select">
+                <option value="">Choose an ingredient…</option>
+                <?php foreach ($allIngredients as $ing): ?>
+                  <option value="<?php echo (int) $ing['ingredient_id']; ?>"><?php echo htmlspecialchars($ing['ingredient_name']); ?></option>
+                <?php endforeach; ?>
+                <option value="__new__">+ Add a new ingredient…</option>
+              </select>
+              <input type="text" name="new_ingredient_name[]" class="ingredient-new-name" placeholder="Ingredient name" maxlength="150" style="display:none;">
+            </div>
             <input type="number" name="quantity[]" step="0.01" min="0" placeholder="Qty">
             <select name="unit_id[]">
               <option value="">Unit</option>

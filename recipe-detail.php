@@ -1,5 +1,6 @@
 <?php
 require_once 'includes/db.php';
+require_once 'includes/upload.php';
 
 function placeholder_img($seed, $w = 600, $h = 600) {
     return "https://picsum.photos/seed/" . urlencode($seed) . "/$w/$h";
@@ -23,6 +24,59 @@ $isFavorited = false;
 $favoriteMessage = null;
 $shareMessage = null;
 $alreadyShared = false;
+$deleteError = null;
+
+/* ---------- Delete this recipe (author only) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_recipe') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['recipe_id'] ?? 0);
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken)) {
+        $deleteError = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $deleteError = 'Log in to manage your recipes.';
+    } elseif ($pdo && $targetId > 0) {
+        try {
+            // Ownership check happens in the WHERE clause below, not just in
+            // the UI — this is what actually stops someone deleting a recipe
+            // that isn't theirs.
+            $ownerStmt = $pdo->prepare('SELECT user_id, image_url FROM RECIPE WHERE recipe_id = ?');
+            $ownerStmt->execute([$targetId]);
+            $recipeRow = $ownerStmt->fetch();
+
+            if (!$recipeRow || (int) $recipeRow['user_id'] !== (int) $_SESSION['user_id']) {
+                $deleteError = 'You can only delete recipes you added yourself.';
+            } else {
+                $pdo->beginTransaction();
+
+                // Community posts point AT a recipe (ON DELETE SET NULL) — deleting
+                // the recipe alone would leave a "Recipe" post with no recipe
+                // attached. Remove the auto-created Recipe posts for it first, which
+                // cascades their own steps/likes/comments/shares automatically.
+                $pdo->prepare("DELETE FROM COMMUNITY_POST WHERE recipe_id = ? AND post_type = 'Recipe'")
+                    ->execute([$targetId]);
+
+                // Everything else (RECIPE_INGREDIENT, RECIPE_STEP, RECIPE_DIETARY,
+                // NUTRITION, RECIPE_FAVORITE, RECIPE_CARD) cascades automatically.
+                $del = $pdo->prepare('DELETE FROM RECIPE WHERE recipe_id = ? AND user_id = ?');
+                $del->execute([$targetId, $_SESSION['user_id']]);
+
+                $pdo->commit();
+
+                if ($del->rowCount() > 0 && !empty($recipeRow['image_url'])) {
+                    delete_uploaded_file($recipeRow['image_url']);
+                }
+
+                header('Location: recipes.php?recipe_deleted=1');
+                exit;
+            }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('FoodFusion delete_recipe: ' . $e->getMessage());
+            $deleteError = 'Something went wrong deleting that recipe. Please try again.';
+        }
+    }
+}
 
 /* ---------- Handle sharing this recipe to the Community Cookbook ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'share_recipe') {
@@ -268,6 +322,23 @@ require_once 'includes/header.php';
             </div>
           <?php endif; ?>
         </div>
+
+        <?php if ($deleteError): ?>
+          <p class="form-note" style="color: var(--paprika); margin-top: 12px;"><?php echo htmlspecialchars($deleteError); ?></p>
+        <?php endif; ?>
+
+        <?php if (!empty($_SESSION['user_id']) && (int) $recipe['user_id'] === (int) $_SESSION['user_id']): ?>
+          <form method="POST" action="recipe-detail.php?id=<?php echo (int) $recipe['recipe_id']; ?>"
+                data-confirm="Delete this recipe? This removes it from the collection and the homepage, along with its Community Cookbook post. This can't be undone.">
+            <input type="hidden" name="action" value="delete_recipe">
+            <input type="hidden" name="recipe_id" value="<?php echo (int) $recipe['recipe_id']; ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+            <button type="submit" class="delete-recipe-btn">
+              <svg viewBox="0 0 24 24" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m2 0v13a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/></svg>
+              Delete this recipe
+            </button>
+          </form>
+        <?php endif; ?>
       </div>
     </div>
   </section>

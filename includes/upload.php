@@ -33,7 +33,11 @@ function handle_image_upload($file, &$error = null)
     }
 
     if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
-        $error = 'That image is too large. Please choose a file under 3 MB.';
+        // This is PHP's own server-level limit (upload_max_filesize / post_max_size
+        // in php.ini), which can be smaller than our app's 3 MB limit below — so
+        // this message must NOT claim "3 MB", since that may not be true here.
+        $error = 'That image is larger than this server currently allows. Try a smaller photo, '
+               . 'or increase upload_max_filesize and post_max_size in php.ini and restart Apache.';
         return null;
     }
 

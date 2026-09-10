@@ -2582,7 +2582,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
       "ing ing ing"
       "qty unit rm";
   }
-  .ingredient-row .ingredient-select { grid-area: ing; }
+  .ingredient-row .ingredient-pick { grid-area: ing; }
   .ingredient-row input[name="quantity[]"] { grid-area: qty; }
   .ingredient-row select[name="unit_id[]"] { grid-area: unit; }
   .ingredient-row .row-remove { grid-area: rm; }
@@ -3129,3 +3129,31 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 @media (max-width: 560px) {
   .legal-table { display: block; overflow-x: auto; white-space: nowrap; }
 }
+
+.ingredient-pick { position: relative; }
+.ingredient-pick .ingredient-new-name {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(31, 90, 61, 0.22);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  background: var(--plaster);
+}
+
+.delete-recipe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(177, 74, 42, 0.3);
+  background: none;
+  color: var(--paprika);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.delete-recipe-btn:hover { background: rgba(177, 74, 42, 0.08); }
