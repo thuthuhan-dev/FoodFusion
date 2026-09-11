@@ -6,6 +6,112 @@ function placeholder_img($seed, $w = 600, $h = 600) {
     return "https://picsum.photos/seed/" . urlencode($seed) . "/$w/$h";
 }
 
+$eduErrors = ['document' => null, 'video' => null, 'infographic' => null];
+$eduOpen   = ['document' => false, 'video' => false, 'infographic' => false];
+$eduAddedLabels = ['document' => 'Document', 'video' => 'Video', 'infographic' => 'Infographic'];
+$eduSuccess = isset($_GET['added'], $eduAddedLabels[$_GET['added']])
+    ? $eduAddedLabels[$_GET['added']] . ' added.'
+    : null;
+
+/* ---------- Add: Educational Document ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_edu_document') {
+    $eduOpen['document'] = true;
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+        $eduErrors['document'] = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eduErrors['document'] = 'Log in to add a document.';
+    } elseif ($pdo) {
+        $title = trim($_POST['title'] ?? '');
+        $desc = trim($_POST['description'] ?? '');
+        $docError = null;
+        $fileUrl = handle_document_upload($_FILES['file_upload'] ?? null, $docError);
+
+        if ($docError) {
+            $eduErrors['document'] = $docError;
+        } elseif ($title === '' || mb_strlen($title) > 150) {
+            $eduErrors['document'] = 'Give the document a title under 150 characters.';
+        } elseif ($fileUrl === null) {
+            $eduErrors['document'] = 'Please attach a PDF file.';
+        } else {
+            try {
+                $pdo->prepare('INSERT INTO EDUCATIONAL_DOCUMENT (user_id, title, description, file_url) VALUES (?, ?, ?, ?)')
+                    ->execute([$_SESSION['user_id'], $title, $desc !== '' ? $desc : null, $fileUrl]);
+                header('Location: education.php?added=document#documents');
+                exit;
+            } catch (PDOException $e) {
+                error_log('FoodFusion add_edu_document: ' . $e->getMessage());
+                $eduErrors['document'] = 'Something went wrong saving that. Please try again.';
+            }
+        }
+    }
+}
+
+/* ---------- Add: Educational Video ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_edu_video') {
+    $eduOpen['video'] = true;
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+        $eduErrors['video'] = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eduErrors['video'] = 'Log in to add a video.';
+    } elseif ($pdo) {
+        $title = trim($_POST['title'] ?? '');
+        $desc = trim($_POST['description'] ?? '');
+        $videoUrl = trim($_POST['video_url'] ?? '');
+
+        if ($title === '' || mb_strlen($title) > 150) {
+            $eduErrors['video'] = 'Give the video a title under 150 characters.';
+        } elseif ($videoUrl === '' || !filter_var($videoUrl, FILTER_VALIDATE_URL)) {
+            $eduErrors['video'] = 'Please provide a valid video link.';
+        } else {
+            try {
+                $pdo->prepare('INSERT INTO EDUCATIONAL_VIDEO (user_id, title, description, video_url) VALUES (?, ?, ?, ?)')
+                    ->execute([$_SESSION['user_id'], $title, $desc !== '' ? $desc : null, $videoUrl]);
+                header('Location: education.php?added=video#videos');
+                exit;
+            } catch (PDOException $e) {
+                error_log('FoodFusion add_edu_video: ' . $e->getMessage());
+                $eduErrors['video'] = 'Something went wrong saving that. Please try again.';
+            }
+        }
+    }
+}
+
+/* ---------- Add: Infographic ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_infographic') {
+    $eduOpen['infographic'] = true;
+    $token = $_POST['csrf_token'] ?? '';
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $token)) {
+        $eduErrors['infographic'] = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eduErrors['infographic'] = 'Log in to add an infographic.';
+    } elseif ($pdo) {
+        $title = trim($_POST['title'] ?? '');
+        $desc = trim($_POST['description'] ?? '');
+        $imgError = null;
+        $imageUrl = handle_image_upload($_FILES['image_file'] ?? null, $imgError);
+
+        if ($imgError) {
+            $eduErrors['infographic'] = $imgError;
+        } elseif ($title === '' || mb_strlen($title) > 150) {
+            $eduErrors['infographic'] = 'Give the infographic a title under 150 characters.';
+        } elseif ($imageUrl === null) {
+            $eduErrors['infographic'] = 'Please add the infographic image.';
+        } else {
+            try {
+                $pdo->prepare('INSERT INTO INFOGRAPHIC (user_id, title, description, image_url) VALUES (?, ?, ?, ?)')
+                    ->execute([$_SESSION['user_id'], $title, $desc !== '' ? $desc : null, $imageUrl]);
+                header('Location: education.php?added=infographic#infographics');
+                exit;
+            } catch (PDOException $e) {
+                error_log('FoodFusion add_infographic: ' . $e->getMessage());
+                $eduErrors['infographic'] = 'Something went wrong saving that. Please try again.';
+            }
+        }
+    }
+}
+
 /* ---------- Educational Documents ---------- */
 $documents = [];
 if ($pdo) {
@@ -75,6 +181,10 @@ require_once 'includes/header.php';
 </section>
 
 <div class="wrap">
+  <?php if ($eduSuccess): ?>
+    <p class="auth-success"><?php echo htmlspecialchars($eduSuccess); ?></p>
+  <?php endif; ?>
+
   <nav class="resource-jump-nav">
     <a href="#documents">Documents</a>
     <a href="#videos">Videos</a>
@@ -84,7 +194,42 @@ require_once 'includes/header.php';
   <section class="resource-section" id="documents">
     <div class="section-head">
       <div><span class="eyebrow">Read</span><h2>Documents</h2></div>
+      <?php if (!empty($_SESSION['user_id'])): ?>
+        <button type="button" class="btn btn-outline resource-add-toggle" data-toggle-panel="docAddPanel">+ Add a document</button>
+      <?php else: ?>
+        <button type="button" class="btn btn-outline" data-open-modal="loginModal">+ Add a document</button>
+      <?php endif; ?>
     </div>
+
+    <?php if (!empty($_SESSION['user_id'])): ?>
+      <div class="add-recipe-panel<?php echo $eduOpen['document'] ? ' open' : ''; ?>" id="docAddPanel">
+        <?php if ($eduErrors['document']): ?>
+          <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($eduErrors['document']); ?></p>
+        <?php endif; ?>
+        <form method="POST" action="education.php#documents" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="add_edu_document">
+          <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+          <div class="field">
+            <label for="doc_title">Title</label>
+            <input type="text" id="doc_title" name="title" required maxlength="150" placeholder="e.g. Understanding Moroccan Spice Blends">
+          </div>
+          <div class="field">
+            <label for="doc_description">Description</label>
+            <textarea id="doc_description" name="description" placeholder="What does this document cover?"></textarea>
+          </div>
+          <div class="field">
+            <label for="doc_file">PDF file</label>
+            <input type="file" id="doc_file" name="file_upload" accept="application/pdf" required>
+            <span class="field-hint">PDF only &middot; max 5 MB</span>
+          </div>
+          <div class="add-recipe-actions">
+            <button type="submit" class="btn btn-primary">Add document</button>
+            <button type="button" class="btn btn-ghost" data-close-panel="docAddPanel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    <?php endif; ?>
+
     <?php if (empty($documents)): ?>
       <p class="empty-note">No documents have been uploaded yet.</p>
     <?php else: ?>
@@ -111,7 +256,41 @@ require_once 'includes/header.php';
   <section class="resource-section" id="videos">
     <div class="section-head">
       <div><span class="eyebrow">Watch</span><h2>Videos</h2></div>
+      <?php if (!empty($_SESSION['user_id'])): ?>
+        <button type="button" class="btn btn-outline resource-add-toggle" data-toggle-panel="videoAddPanel">+ Add a video</button>
+      <?php else: ?>
+        <button type="button" class="btn btn-outline" data-open-modal="loginModal">+ Add a video</button>
+      <?php endif; ?>
     </div>
+
+    <?php if (!empty($_SESSION['user_id'])): ?>
+      <div class="add-recipe-panel<?php echo $eduOpen['video'] ? ' open' : ''; ?>" id="videoAddPanel">
+        <?php if ($eduErrors['video']): ?>
+          <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($eduErrors['video']); ?></p>
+        <?php endif; ?>
+        <form method="POST" action="education.php#videos">
+          <input type="hidden" name="action" value="add_edu_video">
+          <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+          <div class="field">
+            <label for="vid_title">Title</label>
+            <input type="text" id="vid_title" name="title" required maxlength="150" placeholder="e.g. The History of the Tagine">
+          </div>
+          <div class="field">
+            <label for="vid_description">Description</label>
+            <textarea id="vid_description" name="description" placeholder="What does this video cover?"></textarea>
+          </div>
+          <div class="field">
+            <label for="vid_url">Video link</label>
+            <input type="url" id="vid_url" name="video_url" required placeholder="https://youtube.com/...">
+          </div>
+          <div class="add-recipe-actions">
+            <button type="submit" class="btn btn-primary">Add video</button>
+            <button type="button" class="btn btn-ghost" data-close-panel="videoAddPanel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    <?php endif; ?>
+
     <?php if (empty($eduVideos)): ?>
       <p class="empty-note">No videos have been posted yet.</p>
     <?php else: ?>
@@ -141,7 +320,42 @@ require_once 'includes/header.php';
   <section class="resource-section" id="infographics">
     <div class="section-head">
       <div><span class="eyebrow">Save &amp; share</span><h2>Infographics</h2></div>
+      <?php if (!empty($_SESSION['user_id'])): ?>
+        <button type="button" class="btn btn-outline resource-add-toggle" data-toggle-panel="infoAddPanel">+ Add an infographic</button>
+      <?php else: ?>
+        <button type="button" class="btn btn-outline" data-open-modal="loginModal">+ Add an infographic</button>
+      <?php endif; ?>
     </div>
+
+    <?php if (!empty($_SESSION['user_id'])): ?>
+      <div class="add-recipe-panel<?php echo $eduOpen['infographic'] ? ' open' : ''; ?>" id="infoAddPanel">
+        <?php if ($eduErrors['infographic']): ?>
+          <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($eduErrors['infographic']); ?></p>
+        <?php endif; ?>
+        <form method="POST" action="education.php#infographics" enctype="multipart/form-data">
+          <input type="hidden" name="action" value="add_infographic">
+          <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+          <div class="field">
+            <label for="info_title">Title</label>
+            <input type="text" id="info_title" name="title" required maxlength="150" placeholder="e.g. A Visual Guide to Moroccan Mint Tea">
+          </div>
+          <div class="field">
+            <label for="info_description">Description</label>
+            <textarea id="info_description" name="description" placeholder="What does this infographic show?"></textarea>
+          </div>
+          <div class="field">
+            <label for="info_image">Image</label>
+            <input type="file" id="info_image" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp" required>
+            <span class="field-hint">JPG, PNG, GIF or WEBP &middot; max 3 MB</span>
+          </div>
+          <div class="add-recipe-actions">
+            <button type="submit" class="btn btn-primary">Add infographic</button>
+            <button type="button" class="btn btn-ghost" data-close-panel="infoAddPanel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    <?php endif; ?>
+
     <?php if (empty($infographics)): ?>
       <p class="empty-note">No infographics have been uploaded yet.</p>
     <?php else: ?>

@@ -190,3 +190,59 @@ function delete_uploaded_file($stored)
 
     @unlink($targetReal);
 }
+
+/**
+ * Handle one uploaded DOCUMENT (PDF) — same security approach as
+ * handle_image_upload(): the real file content is checked, not the
+ * filename or the browser-supplied type, and the stored name is random.
+ */
+define('UPLOAD_DOC_MAX_BYTES', 5 * 1024 * 1024); // 5 MB — documents run larger than photos
+
+function handle_document_upload($file, &$error = null)
+{
+    $error = null;
+
+    if (empty($file) || !isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
+        $error = 'That file is larger than this server currently allows. Try a smaller file, '
+               . 'or increase upload_max_filesize and post_max_size in php.ini and restart Apache.';
+        return null;
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $error = 'That file could not be uploaded. Please try again.';
+        return null;
+    }
+    if ($file['size'] > UPLOAD_DOC_MAX_BYTES) {
+        $error = 'That file is too large. Please choose a PDF under 5 MB.';
+        return null;
+    }
+
+    // Read the file's real MIME type from its content, not its extension —
+    // the same principle as image validation. Currently PDF only.
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $realType = $finfo->file($file['tmp_name']);
+
+    if ($realType !== 'application/pdf') {
+        $error = 'Please upload a PDF file.';
+        return null;
+    }
+
+    if (!is_dir(UPLOAD_DIR_FS) && !@mkdir(UPLOAD_DIR_FS, 0755, true)) {
+        $error = 'The server could not save the file. Please try again later.';
+        return null;
+    }
+
+    $filename = bin2hex(random_bytes(16)) . '.pdf';
+    $target   = UPLOAD_DIR_FS . '/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $target)) {
+        $error = 'The server could not save the file. Please try again.';
+        return null;
+    }
+
+    @chmod($target, 0644);
+
+    return UPLOAD_DIR_WEB . '/' . $filename;
+}

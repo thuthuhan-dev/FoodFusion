@@ -139,13 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 
         $uploadError = null;
         $rImage = handle_image_upload($_FILES['image_file'] ?? null, $uploadError);
-        if ($rImage === null) {
-            $typedUrl = trim($_POST['image_url'] ?? '');
-            $rImage = ($typedUrl !== '' && filter_var($typedUrl, FILTER_VALIDATE_URL)) ? $typedUrl : null;
-        }
 
         if ($uploadError) {
             $recipeFormError = $uploadError;
+        } elseif ($rImage === null) {
+            $recipeFormError = 'Please add a photo of the recipe.';
         } elseif ($rName === '' || mb_strlen($rName) > 150) {
             $recipeFormError = 'Give the recipe a name under 150 characters.';
         } elseif ($rCuisine <= 0 || $rCategory <= 0 || $rDiff <= 0) {
@@ -509,8 +507,8 @@ require_once 'includes/header.php';
         </div>
 
         <div class="field">
-          <label for="recipe_photo">Photo (optional)</label>
-          <input type="file" id="recipe_photo" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp">
+          <label for="recipe_photo">Photo</label>
+          <input type="file" id="recipe_photo" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp" required>
           <span class="field-hint">JPG, PNG, GIF or WEBP &middot; max 3 MB</span>
         </div>
 

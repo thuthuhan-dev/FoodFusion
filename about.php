@@ -1,14 +1,10 @@
 <?php
 require_once 'includes/db.php';
 
-function placeholder_img($seed, $w = 600, $h = 600) {
-    return "https://picsum.photos/seed/" . urlencode($seed) . "/$w/$h";
-}
-
 $team = [
-    ['name' => 'Nadia El Fassi', 'role' => 'Founder', 'bio' => 'Started FoodFusion after moving abroad and missing her mother\'s kitchen.'],
-    ['name' => 'Karim Ouazzani', 'role' => 'Head of Recipes', 'bio' => 'Tests every recipe at least three times before it goes on the site.'],
-    ['name' => 'Salma Bennis', 'role' => 'Community Manager', 'bio' => 'Reads every single post in the Community Cookbook — really, every one.'],
+    ['name' => 'Nadia El Fassi', 'role' => 'Founder', 'bio' => 'Started FoodFusion after moving abroad and missing her mother\'s kitchen.', 'image' => 'assets/img/p1.webp'],
+    ['name' => 'Karim Ouazzani', 'role' => 'Head of Recipes', 'bio' => 'Tests every recipe at least three times before it goes on the site.', 'image' => 'assets/img/p2.webp'],
+    ['name' => 'Salma Bennis', 'role' => 'Community Manager', 'bio' => 'Reads every single post in the Community Cookbook — really, every one.', 'image' => 'assets/img/p3.webp'],
 ];
 
 require_once 'includes/header.php';
@@ -24,7 +20,7 @@ require_once 'includes/header.php';
 
 <div class="wrap about-split">
   <div class="media">
-    <img src="<?php echo htmlspecialchars(placeholder_img('about-kitchen', 800, 600)); ?>" alt="A home kitchen with fresh ingredients">
+    <img src="assets/img/kitchen.webp" alt="A home kitchen with fresh ingredients">
   </div>
   <div>
     <span class="eyebrow">Our philosophy</span>
@@ -70,7 +66,7 @@ require_once 'includes/header.php';
     <?php foreach ($team as $i => $person): ?>
       <div class="team-card">
         <div class="photo-circle">
-          <img src="<?php echo htmlspecialchars(placeholder_img('team-' . $i, 300, 300)); ?>" alt="<?php echo htmlspecialchars($person['name']); ?>">
+          <img src="<?php echo htmlspecialchars($person['image']); ?>" alt="<?php echo htmlspecialchars($person['name']); ?>">
         </div>
         <h3><?php echo htmlspecialchars($person['name']); ?></h3>
         <span class="role"><?php echo htmlspecialchars($person['role']); ?></span>

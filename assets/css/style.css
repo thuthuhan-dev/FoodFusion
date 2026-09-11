@@ -788,8 +788,13 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .event-date-chip .day { font-size: 1.05rem; font-weight: 700; line-height: 1; color: var(--zellige-deep); }
 .event-date-chip .mon { font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paprika); }
 .event-card-v2-body { padding: 18px 20px 22px; }
-.event-card-v2-body h3 { font-size: 1.02rem; margin-bottom: 4px; }
-.event-card-v2-body .event-loc { display: block; margin-bottom: 14px; }
+/* The card is always white regardless of the section behind it (currently
+   .section-dark), which sets a near-white text color for the whole section.
+   Without this, the title inherits that near-white color onto a white card
+   and becomes almost invisible. */
+.event-card-v2-body { color: var(--ink); }
+.event-card-v2-body h3 { font-size: 1.02rem; margin-bottom: 4px; color: var(--ink); }
+.event-card-v2-body .event-loc { display: block; margin-bottom: 14px; color: var(--ink-soft); }
 .event-card-v2-body .btn { width: 100%; }
 
 /* =======================================================

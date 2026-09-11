@@ -108,6 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 
         if ($uploadError) {
             $eventError = $uploadError;
+        } elseif ($eImage === null) {
+            $eventError = 'Please add a photo for the event.';
         } elseif ($eTitle === '' || mb_strlen($eTitle) > 150) {
             $eventError = 'Give the event a title under 150 characters.';
         } elseif ($eDesc === '') {
@@ -124,12 +126,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                     'INSERT INTO EVENT (event_title, description, event_date, event_location, image_url)
                      VALUES (?, ?, ?, ?, ?)'
                 )->execute([$eTitle, $eDesc, $eDate, $eLocation, $eImage]);
+                $newEventId = (int) $pdo->lastInsertId();
+
+                // Record who created this event, so "edit the event I added" is
+                // something the app can actually check ownership for later.
+                $organizerRole = $pdo->query("SELECT role_id FROM EVENT_ROLE WHERE role_name = 'Organizer'")->fetchColumn();
+                if ($organizerRole) {
+                    $pdo->prepare('INSERT INTO EVENT_PARTICIPANT (event_id, user_id, role_id) VALUES (?, ?, ?)')
+                        ->execute([$newEventId, $_SESSION['user_id'], $organizerRole]);
+                }
 
                 header('Location: index.php?event_added=1#events');
                 exit;
             } catch (PDOException $e) {
+                error_log('FoodFusion create_event: ' . $e->getMessage());
                 $eventError = 'Something went wrong saving that event. Please try again.';
             }
+        }
+    }
+}
+
+/* ---------- Edit an event (organizer only) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_event') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['event_id'] ?? 0);
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken)) {
+        $eventError = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eventError = 'Log in to manage events.';
+    } elseif ($pdo && $targetId > 0) {
+        try {
+            // Ownership check: the person must be recorded as this event's
+            // Organizer in EVENT_PARTICIPANT. Events created before this
+            // feature existed have no organizer on file, so nobody can edit
+            // them yet — see the note in seed_event_roles.sql.
+            $orgCheck = $pdo->prepare(
+                "SELECT 1 FROM EVENT_PARTICIPANT ep
+                 JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+                 WHERE ep.event_id = ? AND ep.user_id = ? AND er.role_name = 'Organizer'"
+            );
+            $orgCheck->execute([$targetId, $_SESSION['user_id']]);
+            $isOrganizer = (bool) $orgCheck->fetch();
+
+            if (!$isOrganizer) {
+                $eventError = 'You can only edit events you organized.';
+            } else {
+                $eTitle    = trim($_POST['event_title'] ?? '');
+                $eDesc     = trim($_POST['description'] ?? '');
+                $eDate     = trim($_POST['event_date'] ?? '');
+                $eLocation = trim($_POST['event_location'] ?? '');
+
+                $uploadError = null;
+                $newImage = handle_image_upload($_FILES['image_file'] ?? null, $uploadError);
+
+                $dateOk = (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $eDate) && strtotime($eDate) !== false;
+
+                if ($uploadError) {
+                    $eventError = $uploadError;
+                } elseif ($eTitle === '' || mb_strlen($eTitle) > 150) {
+                    $eventError = 'Give the event a title under 150 characters.';
+                } elseif ($eDesc === '') {
+                    $eventError = 'Please describe the event.';
+                } elseif (!$dateOk) {
+                    $eventError = 'Please choose a valid event date.';
+                } elseif ($eLocation === '' || mb_strlen($eLocation) > 150) {
+                    $eventError = 'Please give the event a location.';
+                } else {
+                    $imgStmt = $pdo->prepare('SELECT image_url FROM EVENT WHERE event_id = ?');
+                    $imgStmt->execute([$targetId]);
+                    $oldImage = $imgStmt->fetchColumn();
+                    $finalImage = $newImage !== null ? $newImage : $oldImage;
+
+                    $pdo->prepare(
+                        'UPDATE EVENT SET event_title=?, description=?, event_date=?, event_location=?, image_url=?, updated_at=NOW()
+                         WHERE event_id=?'
+                    )->execute([$eTitle, $eDesc, $eDate, $eLocation, $finalImage, $targetId]);
+
+                    if ($newImage !== null && !empty($oldImage)) {
+                        delete_uploaded_file($oldImage);
+                    }
+
+                    header('Location: index.php?event_updated=1#events');
+                    exit;
+                }
+            }
+        } catch (PDOException $e) {
+            error_log('FoodFusion edit_event: ' . $e->getMessage());
+            $eventError = 'Something went wrong saving your changes. Please try again.';
         }
     }
 }
@@ -137,23 +221,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
 if (isset($_GET['event_added'])) {
     $eventSuccess = 'Your event has been added to the calendar.';
 }
+if (isset($_GET['event_updated'])) {
+    $eventSuccess = 'Your event has been updated.';
+}
 
 /* ---------- Upcoming events ---------- */
 $events = [];
 if ($pdo) {
     try {
+        // Was capped at 6, which is why events further out (e.g. next month)
+        // could disappear from view once 6 sooner ones existed — raised so a
+        // fuller run of upcoming events actually shows.
         $stmt = $pdo->query(
             "SELECT event_id, event_title, description, event_date, event_location, image_url
              FROM EVENT
              WHERE event_date >= CURDATE()
              ORDER BY event_date ASC
-             LIMIT 6"
+             LIMIT 16"
         );
         $events = $stmt->fetchAll();
     } catch (PDOException $e) {
         $events = [];
     }
 }
+
+// Which of these events did the current member organize? Used to decide
+// whether they see an Edit option for a given event.
+$myOrganizedEventIds = [];
+if ($pdo && !empty($_SESSION['user_id'])) {
+    try {
+        $orgStmt = $pdo->prepare(
+            "SELECT ep.event_id FROM EVENT_PARTICIPANT ep
+             JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+             WHERE ep.user_id = ? AND er.role_name = 'Organizer'"
+        );
+        $orgStmt->execute([$_SESSION['user_id']]);
+        $myOrganizedEventIds = array_column($orgStmt->fetchAll(), 'event_id');
+    } catch (PDOException $e) {
+        $myOrganizedEventIds = [];
+    }
+}
+
 if (empty($events)) {
     $events = [
         ['event_id' => 1, 'event_title' => 'Artisan Sourdough Masterclass', 'description' => 'Details for this event will be published soon.', 'event_date' => date('Y-m-d', strtotime('+4 days')), 'event_location' => 'Online', 'image_url' => null],
@@ -438,8 +546,10 @@ require_once 'includes/header.php';
 
     <?php if (!empty($_SESSION['user_id'])): ?>
       <div class="add-event-panel<?php echo $eventError ? ' open' : ''; ?>" id="addEventPanel">
-        <form method="POST" action="index.php#events" enctype="multipart/form-data">
-          <input type="hidden" name="action" value="create_event">
+        <h3 class="form-section-title" id="eventFormHeading" style="margin-top:0;">Add an event</h3>
+        <form method="POST" action="index.php#events" enctype="multipart/form-data" id="eventForm">
+          <input type="hidden" name="action" value="create_event" id="eventFormAction">
+          <input type="hidden" name="event_id" value="" id="eventFormEventId">
           <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
           <div class="field-row">
             <div class="field">
@@ -460,11 +570,14 @@ require_once 'includes/header.php';
             <textarea id="event_description" name="description" required placeholder="What happens at this event?"></textarea>
           </div>
           <div class="field">
-            <label for="event_image">Photo (optional)</label>
-            <input type="file" id="event_image" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp">
-            <span class="field-hint">JPG, PNG, GIF or WEBP &middot; max 3 MB</span>
+            <label for="event_image" id="eventImageLabel">Photo</label>
+            <input type="file" id="event_image" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp" required>
+            <span class="field-hint" id="eventImageHint">JPG, PNG, GIF or WEBP &middot; max 3 MB</span>
           </div>
-          <button type="submit" class="btn btn-primary">Add event</button>
+          <div class="add-recipe-actions">
+            <button type="submit" class="btn btn-primary" id="eventFormSubmit">Add event</button>
+            <button type="button" class="btn btn-ghost" id="cancelEventForm">Cancel</button>
+          </div>
         </form>
       </div>
     <?php endif; ?>
@@ -488,11 +601,14 @@ require_once 'includes/header.php';
               <span class="event-loc"><?php echo htmlspecialchars($event['event_location']); ?></span>
               <button type="button" class="btn btn-outline event-detail-btn"
                       style="border-color: rgba(31,90,61,0.3); color: var(--zellige-deep);"
+                      data-event-id="<?php echo (int) $event['event_id']; ?>"
                       data-event-title="<?php echo htmlspecialchars($event['event_title']); ?>"
                       data-event-date="<?php echo htmlspecialchars(date('l j F Y', $ts)); ?>"
+                      data-event-date-raw="<?php echo htmlspecialchars(date('Y-m-d', $ts)); ?>"
                       data-event-location="<?php echo htmlspecialchars($event['event_location']); ?>"
                       data-event-description="<?php echo htmlspecialchars($event['description'] ?? ''); ?>"
-                      data-event-image="<?php echo htmlspecialchars($eImg); ?>">
+                      data-event-image="<?php echo htmlspecialchars($eImg); ?>"
+                      data-can-edit="<?php echo in_array((int) $event['event_id'], $myOrganizedEventIds, true) ? '1' : '0'; ?>">
                 View details
               </button>
             </div>
@@ -562,6 +678,10 @@ require_once 'includes/header.php';
       <span id="eventModalLocation"></span>
     </div>
     <p id="eventModalDescription" class="event-modal-description"></p>
+    <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:16px;">
+      <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+      Edit this event
+    </button>
   </div>
 </div>
 

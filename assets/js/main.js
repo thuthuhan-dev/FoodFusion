@@ -79,6 +79,46 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) closeAllModals();
   });
 
+  /* Repeatable "add another step" rows — used by the Community Cookbook
+     composers (Cooking Tip / Culinary Experience) and the Edit Post form.
+     Not delegated: the buttons this targets are all present at page load
+     on every page that uses it, none are added dynamically afterwards. */
+  document.querySelectorAll('[data-add-step]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var container = document.getElementById(btn.getAttribute('data-add-step'));
+      if (!container) return;
+      var row = document.createElement('div');
+      row.className = 'step-input-row';
+      row.style.marginTop = '8px';
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.name = 'step[]';
+      input.placeholder = 'Next step';
+      row.appendChild(input);
+      container.appendChild(row);
+      input.focus();
+    });
+  });
+
+  /* Generic "add" panel toggle — used across Resources and Educational
+     Resources (7 forms). One delegated handler instead of seven near-
+     identical named toggles. */
+  document.querySelectorAll('[data-toggle-panel]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var panel = document.getElementById(btn.getAttribute('data-toggle-panel'));
+      if (!panel) return;
+      var isOpen = panel.classList.toggle('open');
+      btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (isOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+  document.querySelectorAll('[data-close-panel]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var panel = document.getElementById(btn.getAttribute('data-close-panel'));
+      if (panel) panel.classList.remove('open');
+    });
+  });
+
   /* Confirm before an irreversible action (post/comment deletion). */
   document.querySelectorAll('form[data-confirm]').forEach(function (form) {
     form.addEventListener('submit', function (e) {
@@ -145,6 +185,42 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
   });
+
+  /* Edit-post panel toggle (post-detail.php) */
+  var editPostToggle = document.getElementById('editPostToggle');
+  var editPostPanel  = document.getElementById('editPostPanel');
+  if (editPostToggle && editPostPanel) {
+    editPostToggle.addEventListener('click', function () {
+      var isOpen = editPostPanel.classList.toggle('open');
+      editPostToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (isOpen) editPostPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  var cancelEditPost = document.getElementById('cancelEditPost');
+  if (cancelEditPost && editPostPanel) {
+    cancelEditPost.addEventListener('click', function () {
+      editPostPanel.classList.remove('open');
+      if (editPostToggle) editPostToggle.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  /* Edit-recipe panel toggle (recipe-detail.php) */
+  var editRecipeToggle = document.getElementById('editRecipeToggle');
+  var editRecipePanel  = document.getElementById('editRecipePanel');
+  if (editRecipeToggle && editRecipePanel) {
+    editRecipeToggle.addEventListener('click', function () {
+      var isOpen = editRecipePanel.classList.toggle('open');
+      editRecipeToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      if (isOpen) editRecipePanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  var cancelEditRecipe = document.getElementById('cancelEditRecipe');
+  if (cancelEditRecipe && editRecipePanel) {
+    cancelEditRecipe.addEventListener('click', function () {
+      editRecipePanel.classList.remove('open');
+      if (editRecipeToggle) editRecipeToggle.setAttribute('aria-expanded', 'false');
+    });
+  }
 
   /* Add-recipe panel: repeatable ingredient and method rows */
   var addRecipeToggle = document.getElementById('addRecipeToggle');
@@ -256,12 +332,54 @@ document.addEventListener('DOMContentLoaded', function () {
     renumberSteps();
   });
 
-  /* Add-event panel on the homepage */
-  var addEventToggle = document.getElementById('addEventToggle');
-  var addEventPanel = document.getElementById('addEventPanel');
+  /* Add-event panel on the homepage — doubles as the Edit form. */
+  var addEventToggle  = document.getElementById('addEventToggle');
+  var addEventPanel   = document.getElementById('addEventPanel');
+  var eventForm       = document.getElementById('eventForm');
+  var eventFormAction = document.getElementById('eventFormAction');
+  var eventFormEventId = document.getElementById('eventFormEventId');
+  var eventFormHeading = document.getElementById('eventFormHeading');
+  var eventFormSubmit  = document.getElementById('eventFormSubmit');
+  var eventImage       = document.getElementById('event_image');
+  var eventImageHint   = document.getElementById('eventImageHint');
+
+  function resetEventFormToCreateMode() {
+    if (!eventForm) return;
+    eventForm.reset();
+    if (eventFormAction) eventFormAction.value = 'create_event';
+    if (eventFormEventId) eventFormEventId.value = '';
+    if (eventFormHeading) eventFormHeading.textContent = 'Add an event';
+    if (eventFormSubmit) eventFormSubmit.textContent = 'Add event';
+    if (eventImage) eventImage.required = true;
+    if (eventImageHint) eventImageHint.textContent = 'JPG, PNG, GIF or WEBP · max 3 MB';
+  }
+
+  function openEventFormInEditMode(data) {
+    if (!eventForm || !addEventPanel) return;
+    eventFormAction.value = 'edit_event';
+    eventFormEventId.value = data.id;
+    document.getElementById('event_title').value = data.title;
+    document.getElementById('event_date').value = data.dateRaw;
+    document.getElementById('event_location').value = data.location;
+    document.getElementById('event_description').value = data.description;
+    if (eventFormHeading) eventFormHeading.textContent = 'Edit event';
+    if (eventFormSubmit) eventFormSubmit.textContent = 'Save changes';
+    if (eventImage) eventImage.required = false;
+    if (eventImageHint) eventImageHint.textContent = 'Leave empty to keep the current photo. JPG, PNG, GIF or WEBP · max 3 MB';
+
+    addEventPanel.classList.add('open');
+    if (addEventToggle) addEventToggle.setAttribute('aria-expanded', 'true');
+    addEventPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   if (addEventToggle && addEventPanel) {
     addEventToggle.addEventListener('click', function () {
-      var isOpen = addEventPanel.classList.toggle('open');
+      // Always start a fresh "add" — otherwise clicking this after editing
+      // an event would leave the form silently stuck in edit mode.
+      var wasOpen = addEventPanel.classList.contains('open');
+      resetEventFormToCreateMode();
+      var isOpen = !wasOpen;
+      addEventPanel.classList.toggle('open', isOpen);
       addEventToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
       if (isOpen) {
         var first = addEventPanel.querySelector('input');
@@ -270,9 +388,19 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  var cancelEventForm = document.getElementById('cancelEventForm');
+  if (cancelEventForm && addEventPanel) {
+    cancelEventForm.addEventListener('click', function () {
+      addEventPanel.classList.remove('open');
+      if (addEventToggle) addEventToggle.setAttribute('aria-expanded', 'false');
+      resetEventFormToCreateMode();
+    });
+  }
+
   /* Event details modal — fills from the button's data attributes,
      so no extra page load is needed. */
   var eventModal = document.getElementById('eventModal');
+  var eventModalEditBtn = document.getElementById('eventModalEditBtn');
   if (eventModal) {
     document.querySelectorAll('.event-detail-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -289,6 +417,21 @@ document.addEventListener('DOMContentLoaded', function () {
         var src = btn.getAttribute('data-event-image') || '';
         if (src) { img.src = src; img.alt = btn.getAttribute('data-event-title') || ''; img.style.display = ''; }
         else { img.style.display = 'none'; }
+
+        if (eventModalEditBtn) {
+          var canEdit = btn.getAttribute('data-can-edit') === '1';
+          eventModalEditBtn.style.display = canEdit ? '' : 'none';
+          eventModalEditBtn.onclick = canEdit ? function () {
+            closeAllModals();
+            openEventFormInEditMode({
+              id: btn.getAttribute('data-event-id'),
+              title: btn.getAttribute('data-event-title') || '',
+              dateRaw: btn.getAttribute('data-event-date-raw') || '',
+              location: btn.getAttribute('data-event-location') || '',
+              description: btn.getAttribute('data-event-description') || ''
+            });
+          } : null;
+        }
 
         openModalById('eventModal');
       });

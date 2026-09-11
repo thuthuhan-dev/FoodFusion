@@ -22,6 +22,7 @@ $steps = [];
 $likeCount = 0;
 $isLiked = false;
 $commentError = null;
+$postUpdated = isset($_GET['post_updated']);
 
 /* ---------- Post a comment ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_comment') {
@@ -95,6 +96,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     }
     header('Location: community.php?tab=' . urlencode($returnTab));
     exit;
+}
+
+/* ---------- Edit a post you wrote (Cooking Tip / Culinary Experience only —
+   a Recipe post's content comes from the recipe itself, edited there) ---------- */
+$editFormError = null;
+$editFormOpen = false;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_post') {
+    $editFormOpen = true;
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['post_id'] ?? 0);
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken)) {
+        $editFormError = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $editFormError = 'Log in to manage your posts.';
+    } elseif ($pdo && $targetId > 0) {
+        try {
+            $ownerStmt = $pdo->prepare('SELECT user_id, post_type, image_url FROM COMMUNITY_POST WHERE post_id = ?');
+            $ownerStmt->execute([$targetId]);
+            $existingPost = $ownerStmt->fetch();
+
+            if (!$existingPost || (int) $existingPost['user_id'] !== (int) $_SESSION['user_id']) {
+                $editFormError = 'You can only edit posts you wrote yourself.';
+            } elseif ($existingPost['post_type'] === 'Recipe') {
+                $editFormError = 'Recipe posts are edited from the recipe itself.';
+            } else {
+                $newTitle = trim($_POST['post_title'] ?? '');
+                $newContent = trim($_POST['post_content'] ?? '');
+                $newSteps = array_values(array_filter(array_map('trim', $_POST['step'] ?? []), fn($s) => $s !== ''));
+
+                $uploadError = null;
+                $newImage = handle_image_upload($_FILES['image_file'] ?? null, $uploadError);
+
+                if ($uploadError) {
+                    $editFormError = $uploadError;
+                } elseif ($newTitle === '' || mb_strlen($newTitle) > 150) {
+                    $editFormError = 'Give your post a title under 150 characters.';
+                } elseif ($newContent === '') {
+                    $editFormError = 'Your post needs some content.';
+                } else {
+                    $pdo->beginTransaction();
+
+                    $finalImage = $newImage !== null ? $newImage : $existingPost['image_url'];
+
+                    $pdo->prepare('UPDATE COMMUNITY_POST SET post_title = ?, post_content = ?, image_url = ?, updated_at = NOW() WHERE post_id = ? AND user_id = ?')
+                        ->execute([$newTitle, $newContent, $finalImage, $targetId, $_SESSION['user_id']]);
+
+                    $pdo->prepare('DELETE FROM COMMUNITY_POST_STEP WHERE post_id = ?')->execute([$targetId]);
+                    if ($newSteps) {
+                        $stepStmt = $pdo->prepare('INSERT INTO COMMUNITY_POST_STEP (post_id, step_number, instruction) VALUES (?, ?, ?)');
+                        foreach ($newSteps as $i => $instruction) {
+                            $stepStmt->execute([$targetId, $i + 1, $instruction]);
+                        }
+                    }
+
+                    $pdo->commit();
+
+                    if ($newImage !== null && !empty($existingPost['image_url'])) {
+                        delete_uploaded_file($existingPost['image_url']);
+                    }
+
+                    header('Location: post-detail.php?id=' . $targetId . '&post_updated=1');
+                    exit;
+                }
+            }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('FoodFusion edit_post: ' . $e->getMessage());
+            $editFormError = 'Something went wrong saving your changes. Please try again.';
+        }
+    }
 }
 
 /* ---------- Load the post ---------- */
@@ -179,6 +252,10 @@ require_once 'includes/header.php';
     <article class="post-card <?php echo $typeClass; ?>">
       <span class="post-type-badge"><?php echo htmlspecialchars($post['post_type']); ?></span>
 
+      <?php if ($postUpdated): ?>
+        <p class="auth-success">Post updated.</p>
+      <?php endif; ?>
+
       <div class="post-header">
         <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($post['first_name'], 0, 1) . substr($post['last_name'], 0, 1))); ?></span>
         <div>
@@ -231,6 +308,13 @@ require_once 'includes/header.php';
           <?php echo count($comments); ?> comment<?php echo count($comments) === 1 ? '' : 's'; ?>
         </span>
 
+        <?php if (!empty($_SESSION['user_id']) && (int) $post['author_id'] === (int) $_SESSION['user_id'] && $post['post_type'] !== 'Recipe'): ?>
+          <button type="button" class="post-comment-link" id="editPostToggle" style="background:none; border:none; cursor:pointer;" aria-expanded="<?php echo $editFormOpen ? 'true' : 'false'; ?>" aria-controls="editPostPanel">
+            <svg viewBox="0 0 24 24" width="16" height="16" style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+            Edit
+          </button>
+        <?php endif; ?>
+
         <?php if (!empty($_SESSION['user_id']) && (int) $post['author_id'] === (int) $_SESSION['user_id']): ?>
           <form method="POST" action="post-detail.php" style="display:inline; margin-left:auto;" data-confirm="Delete this post? This can't be undone.">
             <input type="hidden" name="action" value="delete_post">
@@ -244,6 +328,47 @@ require_once 'includes/header.php';
           </form>
         <?php endif; ?>
       </div>
+
+      <?php if (!empty($_SESSION['user_id']) && (int) $post['author_id'] === (int) $_SESSION['user_id'] && $post['post_type'] !== 'Recipe'): ?>
+        <div class="add-recipe-panel<?php echo $editFormOpen ? ' open' : ''; ?>" id="editPostPanel" style="margin-top:16px;">
+          <?php if ($editFormError): ?>
+            <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($editFormError); ?></p>
+          <?php endif; ?>
+          <form method="POST" action="post-detail.php?id=<?php echo (int) $post['post_id']; ?>" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="edit_post">
+            <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+            <div class="field">
+              <label for="edit_post_title">Title</label>
+              <input type="text" id="edit_post_title" name="post_title" required maxlength="150" value="<?php echo htmlspecialchars($post['post_title']); ?>">
+            </div>
+            <div class="field">
+              <label for="edit_post_content"><?php echo $post['post_type'] === 'Culinary Experience' ? 'Tell the story' : 'Your tip'; ?></label>
+              <textarea id="edit_post_content" name="post_content" required><?php echo htmlspecialchars($post['post_content']); ?></textarea>
+            </div>
+            <div class="field">
+              <label for="edit_post_image">Photo</label>
+              <input type="file" id="edit_post_image" name="image_file" accept="image/jpeg,image/png,image/gif,image/webp">
+              <span class="field-hint">Leave empty to keep the current photo (if any). JPG, PNG, GIF or WEBP &middot; max 3 MB.</span>
+            </div>
+            <div class="field" id="editPostSteps">
+              <label><?php echo $post['post_type'] === 'Culinary Experience' ? 'Moments' : 'Steps'; ?> (optional)</label>
+              <?php if (empty($steps)): ?>
+                <div class="step-input-row"><input type="text" name="step[]" placeholder="Step 1"></div>
+              <?php else: ?>
+                <?php foreach ($steps as $s): ?>
+                  <div class="step-input-row"><input type="text" name="step[]" value="<?php echo htmlspecialchars($s); ?>"></div>
+                <?php endforeach; ?>
+              <?php endif; ?>
+            </div>
+            <button type="button" class="btn btn-ghost" data-add-step="editPostSteps" style="margin-bottom:16px;">+ Add another</button>
+            <div class="add-recipe-actions">
+              <button type="submit" class="btn btn-primary">Save changes</button>
+              <button type="button" class="btn btn-ghost" id="cancelEditPost">Cancel</button>
+            </div>
+          </form>
+        </div>
+      <?php endif; ?>
     </article>
 
     <section class="comments-section" id="comments">

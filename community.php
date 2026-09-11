@@ -556,24 +556,4 @@ require_once 'includes/header.php';
 
 <div style="height: 60px;"></div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('[data-add-step]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var container = document.getElementById(btn.getAttribute('data-add-step'));
-      var row = document.createElement('div');
-      row.className = 'step-input-row';
-      row.style.marginTop = '8px';
-      var input = document.createElement('input');
-      input.type = 'text';
-      input.name = 'step[]';
-      input.placeholder = 'Next step';
-      row.appendChild(input);
-      container.appendChild(row);
-      input.focus();
-    });
-  });
-});
-</script>
-
 <?php require_once 'includes/footer.php'; ?>
