@@ -22,3 +22,8 @@ includes/db.php
 
 # Local/tool-generated data
 .freebuff/
+
+# User-uploaded files
+assets/uploads/*
+!assets/uploads/htaccess
+!assets/uploads/index.html
