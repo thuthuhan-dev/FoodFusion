@@ -1531,6 +1531,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   display: flex;
   gap: 18px;
   align-items: center;
+  flex-wrap: wrap;
   padding-top: 14px;
   border-top: 1px solid var(--plaster-deep);
 }
@@ -3162,3 +3163,168 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   transition: background 0.15s ease;
 }
 .delete-recipe-btn:hover { background: rgba(177, 74, 42, 0.08); }
+
+/* =======================================================
+   Resource "+ Add ..." buttons
+   These sit on LIGHT backgrounds (Resources / Educational
+   Resources pages), but .btn-outline is styled white-on-
+   transparent for use on the DARK events section — which made
+   these buttons render white-on-cream, i.e. invisible.
+   Give them their own dark-on-light styling instead of
+   inheriting the wrong variant.
+   ======================================================= */
+
+.resource-add-toggle,
+.resource-section .section-head .btn-outline,
+.resource-section .section-head .btn {
+  background: var(--white);
+  color: var(--zellige-deep);
+  border: 1px solid rgba(31, 90, 61, 0.3);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.resource-add-toggle:hover,
+.resource-section .section-head .btn-outline:hover,
+.resource-section .section-head .btn:hover {
+  background: var(--plaster);
+  border-color: rgba(31, 90, 61, 0.5);
+}
+
+/* Stop the heading + button row from overflowing its container:
+   the heading can shrink, the button keeps its size and wraps
+   underneath on narrow screens rather than being pushed off-screen. */
+.resource-section .section-head { flex-wrap: wrap; }
+.resource-section .section-head > div:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  .resource-section .section-head .btn,
+  .resource-add-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Same white-on-light problem: these .btn-outline buttons also sit on
+   light surfaces (the recipe detail page and inside the event modal),
+   so they need the dark-on-light treatment too. */
+#editRecipeToggle,
+#eventModalEditBtn {
+  background: var(--white);
+  color: var(--zellige-deep);
+  border: 1px solid rgba(31, 90, 61, 0.3);
+}
+#editRecipeToggle:hover,
+#eventModalEditBtn:hover {
+  background: var(--plaster);
+  border-color: rgba(31, 90, 61, 0.5);
+}
+
+/* =======================================================
+   Added vs Shared distinction + optional repost thoughts
+   ======================================================= */
+
+/* Repost + "add thoughts" now read as ONE control, not two separate
+   actions: a single bordered pill with a thin internal divider, rather
+   than a plain text button (Repost) sitting next to an unrelated-looking
+   second text button ("+ Add your thoughts"). */
+.repost-group {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid rgba(31, 90, 61, 0.18);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--white);
+}
+.repost-group.is-active { border-color: rgba(31, 90, 61, 0.4); }
+
+.repost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 6px 12px;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.repost-group.is-active .repost-btn { color: var(--zellige); }
+.repost-btn:hover { background: var(--plaster); }
+
+.repost-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  background: none;
+  border: none;
+  border-left: 1px solid rgba(31, 90, 61, 0.18);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.repost-caret:hover { background: var(--plaster); color: var(--zellige-deep); }
+.repost-caret[aria-expanded="true"] { transform: rotate(180deg); }
+
+.repost-note-field {
+  margin-top: 10px;
+  flex-basis: 100%;
+  order: 99;
+}
+.repost-note-field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.repost-note-field label span {
+  font-weight: 400;
+  opacity: 0.8;
+}
+.repost-note-field textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(31, 90, 61, 0.22);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  background: var(--plaster);
+  resize: vertical;
+}
+
+/* The resharer's own note, shown above the original post it quotes —
+   visually distinct from the original post's own content so it's clear
+   whose words are whose. */
+.repost-thought {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--plaster);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+.repost-thought-avatar {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  background: var(--zellige-deep);
+  color: var(--white);
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.repost-thought p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink);
+}

@@ -177,7 +177,7 @@ if ($pdo && $postId > 0) {
             "SELECT p.post_id, p.post_title, p.post_content, p.post_type, p.image_url,
                     p.recipe_id, p.created_at, p.user_id AS author_id,
                     u.first_name, u.last_name,
-                    r.recipe_name, r.image_url AS recipe_image
+                    r.recipe_name, r.image_url AS recipe_image, r.user_id AS recipe_owner_id
              FROM COMMUNITY_POST p
              JOIN USERS u ON p.user_id = u.user_id
              LEFT JOIN RECIPE r ON p.recipe_id = r.recipe_id
@@ -238,6 +238,11 @@ require_once 'includes/header.php';
 <?php else:
   $backTab = $typeTabs[$post['post_type']] ?? 'recipe';
   $typeClass = $typeClasses[$post['post_type']] ?? '';
+  $isRecipePost = $post['post_type'] === 'Recipe';
+  $isOriginalAuthor = $isRecipePost && !empty($post['recipe_owner_id'])
+                      && (int) $post['author_id'] === (int) $post['recipe_owner_id'];
+  $recipeBadgeLabel = $isOriginalAuthor ? 'Added a new recipe' : 'Shared a recipe';
+  $genericRecipeText = ['Shared a recipe worth trying.', 'Added a new recipe to the collection.'];
 ?>
 
   <div class="wrap">
@@ -250,7 +255,7 @@ require_once 'includes/header.php';
   <div class="wrap post-detail-wrap">
 
     <article class="post-card <?php echo $typeClass; ?>">
-      <span class="post-type-badge"><?php echo htmlspecialchars($post['post_type']); ?></span>
+      <span class="post-type-badge"><?php echo $isRecipePost ? htmlspecialchars($recipeBadgeLabel) : htmlspecialchars($post['post_type']); ?></span>
 
       <?php if ($postUpdated): ?>
         <p class="auth-success">Post updated.</p>
@@ -281,7 +286,10 @@ require_once 'includes/header.php';
         <img src="<?php echo htmlspecialchars($post['image_url']); ?>" alt="" class="post-detail-image" loading="lazy">
       <?php endif; ?>
 
-      <p class="post-body"><?php echo nl2br(htmlspecialchars($post['post_content'])); ?></p>
+      <?php $showPostContent = !($isRecipePost && in_array(trim((string) $post['post_content']), $genericRecipeText, true)); ?>
+      <?php if ($showPostContent): ?>
+        <p class="post-body"><?php echo nl2br(htmlspecialchars($post['post_content'])); ?></p>
+      <?php endif; ?>
 
       <?php if ($steps): ?>
         <h2 class="post-detail-subhead">Steps</h2>

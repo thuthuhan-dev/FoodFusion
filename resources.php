@@ -367,7 +367,16 @@ require_once 'includes/header.php';
               <h3><?php echo htmlspecialchars($card['card_title']); ?></h3>
               <span>For <?php echo htmlspecialchars($card['recipe_name']); ?></span>
             </div>
-            <a href="<?php echo htmlspecialchars($card['file_url']); ?>" class="dl-icon" aria-label="Download">
+            <?php
+              // The download attribute tells the browser to SAVE the file instead
+              // of opening it in a tab (browsers show PDFs inline by default).
+              // Giving it a value also means the user gets a readable filename
+              // rather than the random name the file is stored under.
+              $cardDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $card['card_title']))) . '.pdf';
+            ?>
+            <a href="<?php echo htmlspecialchars($card['file_url']); ?>"
+               download="<?php echo htmlspecialchars($cardDownloadName); ?>"
+               class="dl-icon" aria-label="Download <?php echo htmlspecialchars($card['card_title']); ?>">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:17px;height:17px;"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
             </a>
           </div>

@@ -242,7 +242,14 @@ require_once 'includes/header.php';
             <div class="doc-card-body">
               <h3><?php echo htmlspecialchars($doc['title']); ?></h3>
               <p><?php echo htmlspecialchars($doc['description']); ?></p>
-              <a href="<?php echo htmlspecialchars($doc['file_url']); ?>" class="dl-link">
+              <?php
+                // download attribute: save the file instead of opening it in a tab,
+                // and give the user a readable filename.
+                $docDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $doc['title']))) . '.pdf';
+              ?>
+              <a href="<?php echo htmlspecialchars($doc['file_url']); ?>"
+                 download="<?php echo htmlspecialchars($docDownloadName); ?>"
+                 class="dl-link">
                 Download
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
               </a>

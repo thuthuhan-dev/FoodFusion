@@ -77,6 +77,11 @@ try {
             respond(['ok' => false, 'error' => 'You cannot repost your own post.'], 400);
         }
 
+        $shareComment = trim($_POST['share_comment'] ?? '');
+        if (mb_strlen($shareComment) > 500) {
+            $shareComment = mb_substr($shareComment, 0, 500);
+        }
+
         $check = $pdo->prepare('SELECT share_id FROM POST_SHARE WHERE post_id = ? AND shared_by_user_id = ?');
         $check->execute([$postId, $userId]);
         $existing = $check->fetch();
@@ -85,7 +90,8 @@ try {
             $pdo->prepare('DELETE FROM POST_SHARE WHERE share_id = ?')->execute([$existing['share_id']]);
             $active = false;
         } else {
-            $pdo->prepare('INSERT INTO POST_SHARE (post_id, shared_by_user_id) VALUES (?, ?)')->execute([$postId, $userId]);
+            $pdo->prepare('INSERT INTO POST_SHARE (post_id, shared_by_user_id, share_comment) VALUES (?, ?, ?)')
+                ->execute([$postId, $userId, $shareComment !== '' ? $shareComment : null]);
             $active = true;
         }
 

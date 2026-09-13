@@ -2,7 +2,7 @@
 require_once 'includes/db.php';
 
 $team = [
-    ['name' => 'Nadia El Fassi', 'role' => 'Founder', 'bio' => 'Started FoodFusion after moving abroad and missing her mother\'s kitchen.', 'image' => 'assets/img/p1.webp'],
+    ['name' => 'Nadia El Fassi', 'role' => 'Founder', 'bio' => 'Started FoodFusion after moving abroad and missing her mother\'s kitchen.', 'image' => 'assets/img/p1.png'],
     ['name' => 'Karim Ouazzani', 'role' => 'Head of Recipes', 'bio' => 'Tests every recipe at least three times before it goes on the site.', 'image' => 'assets/img/p2.webp'],
     ['name' => 'Salma Bennis', 'role' => 'Community Manager', 'bio' => 'Reads every single post in the Community Cookbook — really, every one.', 'image' => 'assets/img/p3.webp'],
 ];

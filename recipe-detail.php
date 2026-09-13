@@ -680,9 +680,10 @@ require_once 'includes/header.php';
         <?php endif; ?>
 
         <?php if ($recipeCard): ?>
+          <?php $cardDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $recipeCard['card_title']))) . '.pdf'; ?>
           <div class="recipe-card-download">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-            <span>Printable version available — <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>"><?php echo htmlspecialchars($recipeCard['card_title']); ?></a></span>
+            <span>Printable version available — <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>" download="<?php echo htmlspecialchars($cardDownloadName); ?>"><?php echo htmlspecialchars($recipeCard['card_title']); ?></a></span>
           </div>
         <?php endif; ?>
       </aside>

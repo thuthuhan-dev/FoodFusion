@@ -128,6 +128,25 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  /* Optional "Add your thoughts" field on Repost — collapsed by default
+     so reposting stays one click; delegated since posts are rendered in a
+     loop and this must work for every one of them without per-row wiring. */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('[data-repost-note-toggle]') : null;
+    if (!btn) return;
+    var field = document.getElementById(btn.getAttribute('data-repost-note-toggle'));
+    if (!field) return;
+    var isOpen = field.style.display !== 'none';
+    field.style.display = isOpen ? 'none' : 'block';
+    // The toggle is now an icon (a chevron), not text — rotate it via CSS
+    // using aria-expanded rather than overwriting its content.
+    btn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    if (!isOpen) {
+      var ta = field.querySelector('textarea');
+      if (ta) ta.focus();
+    }
+  });
+
   /* Like / repost without reloading the page.
      The forms still work normally if this script does not run. */
   document.querySelectorAll('form[data-ajax-action]').forEach(function (form) {

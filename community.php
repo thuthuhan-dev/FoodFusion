@@ -115,6 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
     $postId = (int) ($_POST['post_id'] ?? 0);
     $returnTab = $_POST['tab'] ?? 'recipe';
     $returnPage = (int) ($_POST['page'] ?? 1);
+    $shareComment = trim($_POST['share_comment'] ?? '');
+    if (mb_strlen($shareComment) > 500) {
+        $shareComment = mb_substr($shareComment, 0, 500);
+    }
 
     if (hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken) && !empty($_SESSION['user_id']) && $pdo) {
         try {
@@ -124,7 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
             if ($existing) {
                 $pdo->prepare('DELETE FROM POST_SHARE WHERE share_id = ?')->execute([$existing['share_id']]);
             } else {
-                $pdo->prepare('INSERT INTO POST_SHARE (post_id, shared_by_user_id) VALUES (?, ?)')->execute([$postId, $_SESSION['user_id']]);
+                $pdo->prepare('INSERT INTO POST_SHARE (post_id, shared_by_user_id, share_comment) VALUES (?, ?, ?)')
+                    ->execute([$postId, $_SESSION['user_id'], $shareComment !== '' ? $shareComment : null]);
             }
         } catch (PDOException $e) {
             // Silently ignore.
@@ -210,8 +215,8 @@ if ($pdo && !$dbNotice) {
             "(SELECT p.post_id, p.post_title, p.post_content, p.post_type, p.image_url, p.recipe_id,
                      p.created_at AS feed_time, p.created_at AS original_time, 0 AS is_repost,
                      u.user_id AS author_id, u.first_name, u.last_name,
-                     r.recipe_name, r.image_url AS recipe_image,
-                     NULL AS reshared_first, NULL AS reshared_last
+                     r.recipe_name, r.image_url AS recipe_image, r.user_id AS recipe_owner_id,
+                     NULL AS reshared_first, NULL AS reshared_last, NULL AS share_comment
               FROM COMMUNITY_POST p
               JOIN USERS u ON p.user_id = u.user_id
               LEFT JOIN RECIPE r ON p.recipe_id = r.recipe_id
@@ -220,8 +225,8 @@ if ($pdo && !$dbNotice) {
              (SELECT p.post_id, p.post_title, p.post_content, p.post_type, p.image_url, p.recipe_id,
                      ps.created_at AS feed_time, p.created_at AS original_time, 1 AS is_repost,
                      u.user_id AS author_id, u.first_name, u.last_name,
-                     r.recipe_name, r.image_url AS recipe_image,
-                     su.first_name AS reshared_first, su.last_name AS reshared_last
+                     r.recipe_name, r.image_url AS recipe_image, r.user_id AS recipe_owner_id,
+                     su.first_name AS reshared_first, su.last_name AS reshared_last, ps.share_comment
               FROM POST_SHARE ps
               JOIN COMMUNITY_POST p ON ps.post_id = p.post_id
               JOIN USERS u ON p.user_id = u.user_id
@@ -427,8 +432,20 @@ require_once 'includes/header.php';
           <p class="empty-note" style="grid-column: 1 / -1;">No posts here yet — be the first to share.</p>
         <?php endif; ?>
 
-        <?php foreach ($posts as $post):
+        <?php
+          // Generic filler text the app itself writes when someone shares/adds a
+          // recipe without typing anything — once the badge below already says
+          // "Added a new recipe" / "Shared a recipe", repeating this adds nothing,
+          // so it's the only content deliberately never shown, even though it's
+          // sitting in the database like any real note would be.
+          $genericRecipeText = ['Shared a recipe worth trying.', 'Added a new recipe to the collection.'];
+        ?>
+        <?php foreach ($posts as $postIndex => $post):
           $typeClass = $typeSlugClass[$post['post_type']] ?? '';
+          $isRecipePost = $post['post_type'] === 'Recipe';
+          $isOriginalAuthor = $isRecipePost && !empty($post['recipe_owner_id'])
+                              && (int) $post['author_id'] === (int) $post['recipe_owner_id'];
+          $recipeBadgeLabel = $isOriginalAuthor ? 'Added a new recipe' : 'Shared a recipe';
         ?>
           <article class="post-card <?php echo $typeClass; ?>">
             <?php if (!empty($post['is_repost'])): ?>
@@ -437,9 +454,15 @@ require_once 'includes/header.php';
                 <?php echo htmlspecialchars($post['reshared_first'] . ' ' . $post['reshared_last']); ?> reshared this
                 &middot; <?php echo time_ago($post['feed_time']); ?>
               </p>
+              <?php if (!empty($post['share_comment'])): ?>
+                <div class="repost-thought">
+                  <span class="repost-thought-avatar"><?php echo htmlspecialchars(strtoupper(substr($post['reshared_first'], 0, 1) . substr($post['reshared_last'], 0, 1))); ?></span>
+                  <p><?php echo nl2br(htmlspecialchars($post['share_comment'])); ?></p>
+                </div>
+              <?php endif; ?>
             <?php endif; ?>
 
-            <span class="post-type-badge"><?php echo $typeIcons[$post['post_type']] ?? ''; ?> <?php echo htmlspecialchars($post['post_type']); ?></span>
+            <span class="post-type-badge"><?php echo $typeIcons[$post['post_type']] ?? ''; ?> <?php echo $isRecipePost ? htmlspecialchars($recipeBadgeLabel) : htmlspecialchars($post['post_type']); ?></span>
 
             <div class="post-header">
               <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($post['first_name'], 0, 1) . substr($post['last_name'], 0, 1))); ?></span>
@@ -458,6 +481,7 @@ require_once 'includes/header.php';
 
             <?php if ($post['post_type'] === 'Recipe' && !empty($post['recipe_name'])):
               $thumb = !empty($post['recipe_image']) ? $post['recipe_image'] : placeholder_img('recipe-' . $post['recipe_id'], 200, 200);
+              $showRecipeContent = !in_array(trim((string) $post['post_content']), $genericRecipeText, true);
             ?>
               <div class="recipe-post-card" style="border:none; padding:0; box-shadow:none; margin-bottom:14px;">
                 <div class="thumb"><img src="<?php echo htmlspecialchars($thumb); ?>" alt="<?php echo htmlspecialchars($post['recipe_name']); ?>"></div>
@@ -466,7 +490,9 @@ require_once 'includes/header.php';
                     <svg viewBox="0 0 24 24" width="14" height="14" style="width:14px;height:14px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
                     <?php echo htmlspecialchars($post['recipe_name']); ?>
                   </a>
-                  <p class="post-body"><?php echo nl2br(htmlspecialchars($post['post_content'])); ?></p>
+                  <?php if ($showRecipeContent): ?>
+                    <p class="post-body"><?php echo nl2br(htmlspecialchars($post['post_content'])); ?></p>
+                  <?php endif; ?>
                 </div>
               </div>
             <?php else: ?>
@@ -502,17 +528,32 @@ require_once 'includes/header.php';
               </a>
 
               <?php if (!empty($_SESSION['user_id']) && (int) $post['author_id'] !== (int) $_SESSION['user_id']): ?>
-                <form method="POST" action="community.php" style="display:inline; margin-left:auto;" data-ajax-action="toggle_repost">
-                  <input type="hidden" name="action" value="toggle_repost">
-                  <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
-                  <input type="hidden" name="tab" value="<?php echo htmlspecialchars($activeTab); ?>">
-                  <input type="hidden" name="page" value="<?php echo (int) $page; ?>">
-                  <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
-                  <button type="submit" class="post-comment-link" style="<?php echo $post['reposted_by_me'] ? 'color: var(--zellige);' : ''; ?> background:none; border:none; cursor:pointer;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-                    <span class="action-label"><?php echo $post['reposted_by_me'] ? 'Reposted' : 'Repost'; ?></span>
-                  </button>
-                </form>
+                <div class="repost-group <?php echo $post['reposted_by_me'] ? 'is-active' : ''; ?>" style="margin-left:auto;">
+                  <form method="POST" action="community.php" data-ajax-action="toggle_repost" id="repostForm-<?php echo (int) $postIndex; ?>">
+                    <input type="hidden" name="action" value="toggle_repost">
+                    <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
+                    <input type="hidden" name="tab" value="<?php echo htmlspecialchars($activeTab); ?>">
+                    <input type="hidden" name="page" value="<?php echo (int) $page; ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+                    <button type="submit" class="repost-btn">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
+                      <span class="action-label"><?php echo $post['reposted_by_me'] ? 'Reposted' : 'Repost'; ?></span>
+                    </button>
+                  </form>
+                  <?php if (!$post['reposted_by_me']): ?>
+                    <button type="button" class="repost-caret" data-repost-note-toggle="repostNote-<?php echo (int) $postIndex; ?>" aria-label="Add your thoughts before reposting" title="Add your thoughts before reposting">
+                      <svg viewBox="0 0 24 24" width="14" height="14" style="width:14px;height:14px;" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                  <?php endif; ?>
+                </div>
+              <?php endif; ?>
+
+              <?php if (!empty($_SESSION['user_id']) && (int) $post['author_id'] !== (int) $_SESSION['user_id'] && !$post['reposted_by_me']): ?>
+                <div class="repost-note-field" id="repostNote-<?php echo (int) $postIndex; ?>" style="display:none;">
+                  <label for="repostNoteInput-<?php echo (int) $postIndex; ?>">Add your thoughts <span>(optional — shown with your repost)</span></label>
+                  <textarea id="repostNoteInput-<?php echo (int) $postIndex; ?>" form="repostForm-<?php echo (int) $postIndex; ?>" name="share_comment" maxlength="500"
+                            placeholder="What made you want to share this?"></textarea>
+                </div>
               <?php endif; ?>
 
               <?php if (empty($post['is_repost']) && !empty($_SESSION['user_id']) && (int) $post['author_id'] === (int) $_SESSION['user_id']): ?>
