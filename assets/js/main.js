@@ -452,6 +452,41 @@ document.addEventListener('DOMContentLoaded', function () {
           } : null;
         }
 
+        // Organizer name + headcount, and the Join / Leave control.
+        var organizerName = btn.getAttribute('data-organizer-name') || '';
+        var goingCount = parseInt(btn.getAttribute('data-going-count') || '0', 10);
+        var isOrganizer = btn.getAttribute('data-is-organizer') === '1';
+        var hasJoined = btn.getAttribute('data-has-joined') === '1';
+        var loggedIn = btn.getAttribute('data-logged-in') === '1';
+
+        var peopleEl = document.getElementById('eventModalPeople');
+        var peopleParts = [];
+        if (organizerName) peopleParts.push('Organized by ' + organizerName);
+        peopleParts.push(goingCount + (goingCount === 1 ? ' person going' : ' people going'));
+        peopleEl.textContent = peopleParts.join(' \u00b7 ');
+
+        var joinForm = document.getElementById('eventJoinForm');
+        var joinBtn = document.getElementById('eventJoinBtn');
+        var joinEventId = document.getElementById('eventJoinEventId');
+        var loginPrompt = document.getElementById('eventJoinLoginPrompt');
+
+        if (isOrganizer) {
+          // Already "in" the event by being its organizer — nothing to join.
+          joinForm.style.display = 'none';
+          loginPrompt.style.display = 'none';
+        } else if (!loggedIn) {
+          joinForm.style.display = 'none';
+          loginPrompt.style.display = 'flex';
+        } else {
+          loginPrompt.style.display = 'none';
+          joinForm.style.display = 'block';
+          joinEventId.value = btn.getAttribute('data-event-id') || '';
+          joinBtn.textContent = hasJoined ? 'Leave this event' : 'Join this event';
+          joinBtn.className = hasJoined ? 'btn btn-outline' : 'btn btn-primary';
+          joinBtn.style.width = '100%';
+          joinBtn.style.justifyContent = 'center';
+        }
+
         openModalById('eventModal');
       });
     });

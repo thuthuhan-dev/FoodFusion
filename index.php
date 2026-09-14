@@ -218,6 +218,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
     }
 }
 
+/* ---------- Join / leave an event (Participant role) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggle_participation') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['event_id'] ?? 0);
+
+    if (hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken) && !empty($_SESSION['user_id']) && $pdo && $targetId > 0) {
+        try {
+            $existingStmt = $pdo->prepare('SELECT event_participant_id, role_id FROM EVENT_PARTICIPANT WHERE event_id = ? AND user_id = ?');
+            $existingStmt->execute([$targetId, $_SESSION['user_id']]);
+            $existing = $existingStmt->fetch();
+
+            $organizerRoleId = $pdo->query("SELECT role_id FROM EVENT_ROLE WHERE role_name = 'Organizer'")->fetchColumn();
+
+            if ($existing && (int) $existing['role_id'] === (int) $organizerRoleId) {
+                // The organizer is already "in" their own event — nothing to toggle.
+            } elseif ($existing) {
+                // Already joined as a Participant — leaving.
+                $pdo->prepare('DELETE FROM EVENT_PARTICIPANT WHERE event_participant_id = ?')->execute([$existing['event_participant_id']]);
+            } else {
+                $participantRoleId = $pdo->query("SELECT role_id FROM EVENT_ROLE WHERE role_name = 'Participant'")->fetchColumn();
+                if ($participantRoleId) {
+                    $pdo->prepare('INSERT INTO EVENT_PARTICIPANT (event_id, user_id, role_id) VALUES (?, ?, ?)')
+                        ->execute([$targetId, $_SESSION['user_id'], $participantRoleId]);
+                }
+            }
+        } catch (PDOException $e) {
+            error_log('FoodFusion toggle_participation: ' . $e->getMessage());
+        }
+    }
+    header('Location: index.php#events');
+    exit;
+}
+
 if (isset($_GET['event_added'])) {
     $eventSuccess = 'Your event has been added to the calendar.';
 }
@@ -262,6 +295,44 @@ if ($pdo && !empty($_SESSION['user_id'])) {
     }
 }
 
+// Which events has the current member already joined as a Participant?
+$myJoinedEventIds = [];
+if ($pdo && !empty($_SESSION['user_id'])) {
+    try {
+        $joinStmt = $pdo->prepare(
+            "SELECT ep.event_id FROM EVENT_PARTICIPANT ep
+             JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+             WHERE ep.user_id = ? AND er.role_name = 'Participant'"
+        );
+        $joinStmt->execute([$_SESSION['user_id']]);
+        $myJoinedEventIds = array_column($joinStmt->fetchAll(), 'event_id');
+    } catch (PDOException $e) {
+        $myJoinedEventIds = [];
+    }
+}
+
+// Organizer name + total headcount for every event, so the card/modal can
+// show "Organized by X · N going" without a separate query per event.
+$eventPeople = [];
+if ($pdo) {
+    try {
+        $peopleStmt = $pdo->query(
+            "SELECT ep.event_id, er.role_name, u.first_name, u.last_name
+             FROM EVENT_PARTICIPANT ep
+             JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+             JOIN USERS u ON ep.user_id = u.user_id"
+        );
+        foreach ($peopleStmt->fetchAll() as $row) {
+            $eventPeople[$row['event_id']]['count'] = ($eventPeople[$row['event_id']]['count'] ?? 0) + 1;
+            if ($row['role_name'] === 'Organizer') {
+                $eventPeople[$row['event_id']]['organizer'] = $row['first_name'] . ' ' . $row['last_name'];
+            }
+        }
+    } catch (PDOException $e) {
+        $eventPeople = [];
+    }
+}
+
 if (empty($events)) {
     $events = [
         ['event_id' => 1, 'event_title' => 'Artisan Sourdough Masterclass', 'description' => 'Details for this event will be published soon.', 'event_date' => date('Y-m-d', strtotime('+4 days')), 'event_location' => 'Online', 'image_url' => null],
@@ -288,7 +359,7 @@ require_once 'includes/header.php';
         </div>
       </div>
       <div class="hero-visual-slide">
-        <img src="assets/img/j.jpeg" alt="Moroccan tagine and spices" loading="lazy">
+        <img src="assets/img/share.jpg" alt="Moroccan tagine and spices" loading="lazy">
       </div>
     </div>
   </div>
@@ -305,7 +376,7 @@ require_once 'includes/header.php';
         </div>
       </div>
       <div class="hero-visual-slide">
-        <img src="assets/img/tea.jpg" alt="Fresh herbs and ingredients for a shared meal" loading="lazy">
+        <img src="assets/img/cm.jpg" alt="Fresh herbs and ingredients for a shared meal" loading="lazy">
       </div>
     </div>
   </div>
@@ -322,7 +393,7 @@ require_once 'includes/header.php';
         </div>
       </div>
       <div class="hero-visual-slide">
-        <img src="assets/img/Tmaster.jpg" alt="Hands-on cooking class in progress" loading="lazy">
+        <img src="assets/img/k.jpg" alt="Hands-on cooking class in progress" loading="lazy">
       </div>
     </div>
   </div>
@@ -599,6 +670,16 @@ require_once 'includes/header.php';
             <div class="event-card-v2-body">
               <h3><?php echo htmlspecialchars($event['event_title']); ?></h3>
               <span class="event-loc"><?php echo htmlspecialchars($event['event_location']); ?></span>
+              <?php
+                $peopleInfo = $eventPeople[$event['event_id']] ?? [];
+                $goingCount = $peopleInfo['count'] ?? 0;
+                $organizerName = $peopleInfo['organizer'] ?? '';
+                $isOrganizer = in_array((int) $event['event_id'], $myOrganizedEventIds, true);
+                $hasJoined = in_array((int) $event['event_id'], $myJoinedEventIds, true);
+              ?>
+              <?php if ($goingCount > 0): ?>
+                <span class="event-going-count"><?php echo (int) $goingCount; ?> going</span>
+              <?php endif; ?>
               <button type="button" class="btn btn-outline event-detail-btn"
                       style="border-color: rgba(31,90,61,0.3); color: var(--zellige-deep);"
                       data-event-id="<?php echo (int) $event['event_id']; ?>"
@@ -608,7 +689,12 @@ require_once 'includes/header.php';
                       data-event-location="<?php echo htmlspecialchars($event['event_location']); ?>"
                       data-event-description="<?php echo htmlspecialchars($event['description'] ?? ''); ?>"
                       data-event-image="<?php echo htmlspecialchars($eImg); ?>"
-                      data-can-edit="<?php echo in_array((int) $event['event_id'], $myOrganizedEventIds, true) ? '1' : '0'; ?>">
+                      data-can-edit="<?php echo $isOrganizer ? '1' : '0'; ?>"
+                      data-organizer-name="<?php echo htmlspecialchars($organizerName); ?>"
+                      data-going-count="<?php echo (int) $goingCount; ?>"
+                      data-has-joined="<?php echo $hasJoined ? '1' : '0'; ?>"
+                      data-is-organizer="<?php echo $isOrganizer ? '1' : '0'; ?>"
+                      data-logged-in="<?php echo empty($_SESSION['user_id']) ? '0' : '1'; ?>">
                 View details
               </button>
             </div>
@@ -678,7 +764,18 @@ require_once 'includes/header.php';
       <span id="eventModalLocation"></span>
     </div>
     <p id="eventModalDescription" class="event-modal-description"></p>
-    <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:16px;">
+
+    <p id="eventModalPeople" class="event-modal-people"></p>
+
+    <form method="POST" action="index.php#events" id="eventJoinForm" style="display:none;">
+      <input type="hidden" name="action" value="toggle_participation">
+      <input type="hidden" name="event_id" id="eventJoinEventId" value="">
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+      <button type="submit" id="eventJoinBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Join this event</button>
+    </form>
+    <a href="#" data-open-modal="loginModal" id="eventJoinLoginPrompt" class="btn btn-primary" style="display:none; width:100%; margin-top:6px; justify-content:center;">Log in to join this event</a>
+
+    <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:10px; width:100%; justify-content:center;">
       <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
       Edit this event
     </button>

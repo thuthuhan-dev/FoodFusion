@@ -3328,3 +3328,36 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   line-height: 1.5;
   color: var(--ink);
 }
+
+/* =======================================================
+   Event participation (Join / Leave, going count)
+   ======================================================= */
+
+.event-going-count {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  margin: 2px 0 8px;
+}
+
+.event-modal-people {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin: -8px 0 14px;
+}
+
+.my-event-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.my-event-row {
+  display: block;
+  background: var(--white);
+  border: 1px solid rgba(31, 90, 61, 0.1);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  color: inherit;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.my-event-row:hover { box-shadow: var(--shadow-modal); transform: translateY(-1px); }
+.my-event-row h4 { font-size: 0.98rem; margin: 6px 0 4px; }
+.my-event-row p { font-size: 0.85rem; color: var(--ink-soft); margin: 0; }

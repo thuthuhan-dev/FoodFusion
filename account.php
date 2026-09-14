@@ -24,6 +24,8 @@ $user = null;
 $favorites = [];
 $myRecipes = [];
 $myPosts = [];
+$myOrganizing = [];
+$myAttending = [];
 
 if ($pdo) {
     try {
@@ -65,6 +67,28 @@ if ($pdo) {
         );
         $postStmt->execute([$userId]);
         $myPosts = $postStmt->fetchAll();
+
+        $organizingStmt = $pdo->prepare(
+            "SELECT e.event_id, e.event_title, e.event_date, e.event_location, e.image_url
+             FROM EVENT e
+             JOIN EVENT_PARTICIPANT ep ON e.event_id = ep.event_id
+             JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+             WHERE ep.user_id = ? AND er.role_name = 'Organizer'
+             ORDER BY e.event_date ASC"
+        );
+        $organizingStmt->execute([$userId]);
+        $myOrganizing = $organizingStmt->fetchAll();
+
+        $attendingStmt = $pdo->prepare(
+            "SELECT e.event_id, e.event_title, e.event_date, e.event_location, e.image_url
+             FROM EVENT e
+             JOIN EVENT_PARTICIPANT ep ON e.event_id = ep.event_id
+             JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+             WHERE ep.user_id = ? AND er.role_name = 'Participant'
+             ORDER BY e.event_date ASC"
+        );
+        $attendingStmt->execute([$userId]);
+        $myAttending = $attendingStmt->fetchAll();
 
     } catch (PDOException $e) {
         error_log('FoodFusion account.php: ' . $e->getMessage());
@@ -111,6 +135,7 @@ require_once 'includes/header.php';
     <a href="#favorites" class="account-tab-btn">Favorites <span class="tab-count">(<?php echo count($favorites); ?>)</span></a>
     <a href="#my-recipes" class="account-tab-btn">My Recipes <span class="tab-count">(<?php echo count($myRecipes); ?>)</span></a>
     <a href="#my-posts" class="account-tab-btn">My Posts <span class="tab-count">(<?php echo count($myPosts); ?>)</span></a>
+    <a href="#my-events" class="account-tab-btn">My Events <span class="tab-count">(<?php echo count($myOrganizing) + count($myAttending); ?>)</span></a>
   </nav>
 
   <section class="account-section" id="favorites">
@@ -208,6 +233,47 @@ require_once 'includes/header.php';
           </article>
         <?php endforeach; ?>
       </div>
+    <?php endif; ?>
+  </section>
+
+  <section class="account-section" id="my-events">
+    <div class="section-head">
+      <div><span class="eyebrow">Cooking events</span><h2>My Events</h2></div>
+      <a href="index.php#events" class="btn btn-ghost">See all events &rarr;</a>
+    </div>
+
+    <?php if (!empty($myOrganizing)): ?>
+      <h3 class="form-section-title" style="margin-top:0;">Organizing</h3>
+      <div class="my-event-list">
+        <?php foreach ($myOrganizing as $ev): ?>
+          <a href="index.php#events" class="my-event-row">
+            <div>
+              <span class="post-type-badge">Organizer</span>
+              <h4><?php echo htmlspecialchars($ev['event_title']); ?></h4>
+              <p><?php echo htmlspecialchars(date('j F Y', strtotime($ev['event_date']))); ?> &middot; <?php echo htmlspecialchars($ev['event_location']); ?></p>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if (!empty($myAttending)): ?>
+      <h3 class="form-section-title">Attending</h3>
+      <div class="my-event-list">
+        <?php foreach ($myAttending as $ev): ?>
+          <a href="index.php#events" class="my-event-row">
+            <div>
+              <span class="post-type-badge type-tip">Going</span>
+              <h4><?php echo htmlspecialchars($ev['event_title']); ?></h4>
+              <p><?php echo htmlspecialchars(date('j F Y', strtotime($ev['event_date']))); ?> &middot; <?php echo htmlspecialchars($ev['event_location']); ?></p>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
+    <?php if (empty($myOrganizing) && empty($myAttending)): ?>
+      <p class="empty-note">You're not organizing or attending any events yet — <a href="index.php#events">browse upcoming events</a>.</p>
     <?php endif; ?>
   </section>
 
