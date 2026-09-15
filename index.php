@@ -512,7 +512,7 @@ require_once 'includes/header.php';
       <div class="kitchen-side">
         <?php if (isset($recentRecipes[1])): $second = $recentRecipes[1]; ?>
         <a href="recipe-detail.php?id=<?php echo (int) $second['recipe_id']; ?>" class="kitchen-card">
-          <span class="badge" style="align-self: flex-start; background: rgba(31,90,61,0.08); color: var(--zellige-deep); border-color: rgba(31,90,61,0.15);">Just Added</span>
+          <span class="badge" style="align-self: flex-start; background: rgba(25,25,25,0.08); color: var(--zellige-deep); border-color: rgba(25,25,25,0.15);">Just Added</span>
           <h3><?php echo htmlspecialchars($second['recipe_name']); ?></h3>
           <p><?php echo htmlspecialchars($second['description']); ?></p>
           <div class="author-row">
@@ -681,7 +681,7 @@ require_once 'includes/header.php';
                 <span class="event-going-count"><?php echo (int) $goingCount; ?> going</span>
               <?php endif; ?>
               <button type="button" class="btn btn-outline event-detail-btn"
-                      style="border-color: rgba(31,90,61,0.3); color: var(--zellige-deep);"
+                      style="border-color: rgba(25,25,25,0.3); color: var(--zellige-deep);"
                       data-event-id="<?php echo (int) $event['event_id']; ?>"
                       data-event-title="<?php echo htmlspecialchars($event['event_title']); ?>"
                       data-event-date="<?php echo htmlspecialchars(date('l j F Y', $ts)); ?>"

@@ -26,7 +26,7 @@ unset($_SESSION['auth_old']);
 <link rel="icon" type="image/svg+xml" href="assets/img/logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css?v=<?php echo @filemtime(__DIR__ . '/../assets/css/style.css') ?: time(); ?>">
 </head>
 <body>
@@ -34,7 +34,7 @@ unset($_SESSION['auth_old']);
 <header class="site-header">
   <div class="wrap nav">
     <a href="index.php" class="brand">
-      <span class="brand-mark"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true" focusable="false"><rect width="64" height="64" rx="16" fill="#1F5A3D"/><g stroke="#E8C46A" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#E8C46A"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#E8C46A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M22.5 35h19" stroke="#1F5A3D" stroke-width="2.2" stroke-linecap="round" opacity="0.35"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#E8C46A"/><path d="M18 47.6h28" stroke="#1F5A3D" stroke-width="2" stroke-linecap="round" opacity="0.25"/></svg></span>
+      <span class="brand-mark"><svg viewBox="0 0 64 64" width="30" height="30" aria-hidden="true" focusable="false"><rect width="64" height="64" rx="16" fill="#191919"/><g stroke="#b3372b" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#b3372b"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#b3372b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M22.5 35h19" stroke="#191919" stroke-width="2.2" stroke-linecap="round" opacity="0.35"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#b3372b"/><path d="M18 47.6h28" stroke="#191919" stroke-width="2" stroke-linecap="round" opacity="0.25"/></svg></span>
       FoodFusion
     </a>
 
@@ -84,7 +84,7 @@ unset($_SESSION['auth_old']);
           </div>
         </div>
       <?php else: ?>
-        <a href="login.php" class="btn-ghost" style="color: rgba(255,253,248,0.85); background: none; border: none;" data-open-modal="loginModal">Log in</a>
+        <a href="login.php" class="btn-ghost" style="color: var(--ink); background: none; border: none;" data-open-modal="loginModal">Log in</a>
       <?php endif; ?>
       <button type="button" class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
@@ -101,7 +101,7 @@ unset($_SESSION['auth_old']);
     </button>
     <div class="modal-brand">
       <span class="modal-brand-mark">
-        <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1F5A3D"/><g stroke="#E8C46A" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#E8C46A"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#E8C46A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#E8C46A"/></svg>
+        <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#191919"/><g stroke="#b3372b" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#b3372b"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#b3372b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#b3372b"/></svg>
       </span>
       <h2 id="joinModalTitle">Join FoodFusion</h2>
       <p class="modal-sub">Save favourites, share recipes, and join the community cookbook.</p>
@@ -152,7 +152,7 @@ unset($_SESSION['auth_old']);
     </button>
     <div class="modal-brand">
       <span class="modal-brand-mark">
-        <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1F5A3D"/><g stroke="#E8C46A" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#E8C46A"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#E8C46A" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#E8C46A"/></svg>
+        <svg viewBox="0 0 64 64" width="40" height="40" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#191919"/><g stroke="#b3372b" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"><path d="M25 15c-1.8-2 1.8-3.6 0-5.6"/><path d="M32 12.6c-1.8-2 1.8-3.6 0-5.6"/><path d="M39 15c-1.8-2 1.8-3.6 0-5.6"/></g><circle cx="32" cy="21" r="2.7" fill="#b3372b"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40 Z" fill="#FFFDF8"/><path d="M15 40 Q19.5 30.5 29.8 23.4 Q32 21.9 34.2 23.4 Q44.5 30.5 49 40" fill="none" stroke="#b3372b" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="12" y="40.3" width="40" height="7.4" rx="2.6" fill="#b3372b"/></svg>
       </span>
       <h2 id="loginModalTitle">Welcome back</h2>
       <p class="modal-sub">Log in to pick up where you left off.</p>
