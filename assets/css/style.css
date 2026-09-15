@@ -243,8 +243,23 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   padding-top: 14px;
   border-top: 1px solid rgba(25,25,25,0.14);
 }
-.mobile-nav-cta .btn { justify-content: center; }
+.mobile-nav-cta .btn {
+  justify-content: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+}
 .mobile-nav-cta a.btn-outline { color: var(--ink); border-color: rgba(25,25,25,0.35); }
+.mobile-nav-secondary {
+  display: block;
+  text-align: center;
+  padding: 6px 0 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink-soft);
+}
+.mobile-nav-secondary:hover { color: var(--saffron); }
 
 @media (max-width: 860px) {
   .nav-links {
@@ -329,7 +344,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .section { padding: 76px 0; }
 .events-head-actions { display: flex; align-items: center; gap: 12px; }
-.events-head-arrows { margin: 0; }
+.events-head-actions .btn { height: 42px; padding-top: 0; padding-bottom: 0; }
+.events-head-arrows { margin: 0; align-items: center; }
 .section-head {
   display: flex;
   align-items: flex-end;
@@ -673,9 +689,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .kitchen-grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 24px;
-  align-items: start;
 }
 
 .badge {
@@ -691,19 +706,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .badge-solid { background: var(--saffron); color: var(--white); border-color: transparent; }
 
-/* Flat recipe cards — image, category/time meta line, serif title,
-   description, prep-time/cuisine footer. First card runs larger. */
-.kitchen-card-flat {
-  display: block;
-  color: inherit;
-}
-.kitchen-card-flat-photo {
-  aspect-ratio: 16 / 10;
-  overflow: hidden;
-  margin-bottom: 12px;
-}
-.kitchen-card-flat.first .kitchen-card-flat-photo { aspect-ratio: 16 / 10; }
-.kitchen-card-flat-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Shared meta-line style (category/time eyebrow) used across the flat
+   recipe cards on this page. */
 .kitchen-card-flat-meta {
   display: block;
   font-weight: 700;
@@ -713,17 +717,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   color: var(--saffron);
   margin-bottom: 7px;
 }
-.kitchen-card-flat h3 {
-  font-size: 1.15rem;
-  margin-bottom: 8px;
-  color: var(--ink);
-}
-.kitchen-card-flat.first h3 { font-size: 1.5rem; }
-.kitchen-card-flat p {
-  font-size: 0.9rem;
-  color: var(--ink-soft);
-  margin-bottom: 0;
-}
 .kitchen-card-flat-cta {
   display: block;
   margin-top: 10px;
@@ -732,19 +725,90 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   color: var(--ink-soft);
 }
 
+/* Fresh from the kitchen — one large feature recipe, plus a second
+   recipe and a community-post spotlight stacked beside it. */
+.kitchen-feature-photo,
+.kitchen-card-photo {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.kitchen-feature-photo img,
+.kitchen-card-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kitchen-feature h3 { font-size: 1.6rem; margin-bottom: 10px; color: var(--ink); }
+.kitchen-feature p { font-size: 0.96rem; color: var(--ink-soft); max-width: 52ch; }
+
+.kitchen-side { display: flex; flex-direction: column; gap: 24px; }
+
+.kitchen-card {
+  background: var(--white);
+  border: 1px solid rgba(25, 25, 25, 0.12);
+  padding: 18px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.kitchen-card .kitchen-card-photo { margin: -18px -18px 14px; }
+.kitchen-card h3 { font-size: 1.05rem; margin-bottom: 6px; }
+.kitchen-card p { font-size: 0.88rem; color: var(--ink-soft); flex: 1; }
+
+.kitchen-card.dark {
+  background: var(--zellige-deep);
+  color: var(--white);
+  border: none;
+  padding: 26px;
+  justify-content: center;
+}
+.kitchen-card.dark h3 { color: var(--white); font-size: 1.15rem; }
+.kitchen-card.dark p { color: rgba(255,253,248,0.78); }
+.quote-mark {
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  line-height: 1;
+  color: var(--saffron);
+  opacity: 0.6;
+  margin-bottom: -14px;
+}
+
+.author-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+.author-avatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--saffron);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.author-name { font-size: 0.82rem; font-weight: 600; }
+
 @media (max-width: 900px) {
   .kitchen-grid { grid-template-columns: 1fr; }
 }
 
 /* Event cards with photo top */
 
+/* Sized so exactly 3 cards fill the track width with no partial 4th
+   card peeking in — the next/prev buttons still just scroll the track
+   by one card-width via the existing carousel JS. */
 .event-card-v2 {
   scroll-snap-align: start;
-  flex: 0 0 clamp(250px, 30vw, 300px);
+  flex: 0 0 calc((100% - 2 * 20px) / 3);
   background: var(--white);
   border-radius: 0;
   overflow: hidden;
   border: 1px solid rgba(25, 25, 25, 0.16);
+  display: flex;
+  flex-direction: column;
 }
 .event-photo {
   height: 140px;
@@ -756,12 +820,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   object-fit: cover;
   display: block;
 }
-.event-card-v2-body { padding: 16px 18px 20px; }
-/* The card is always white regardless of the section behind it (currently
-   .section-dark), which sets a near-white text color for the whole section.
-   Without this, the title inherits that near-white color onto a white card
-   and becomes almost invisible. */
-.event-card-v2-body { color: var(--ink); }
+.event-card-v2-body {
+  padding: 16px 18px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* The card is always white regardless of the section behind it
+     (currently .section-dark), which sets a near-white text color for
+     the whole section. Without this, the title inherits that
+     near-white color onto a white card and becomes almost invisible. */
+  color: var(--ink);
+}
 .event-meta-line {
   display: block;
   font-weight: 700;
@@ -772,11 +841,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   margin-bottom: 7px;
 }
 .event-card-v2-body h3 { font-size: 1.05rem; margin-bottom: 6px; color: var(--ink); }
-.event-card-v2-body p { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 10px; }
+.event-card-v2-body p { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 10px; flex: 1; }
+.event-going-count { margin-bottom: 10px; }
 .event-card-v2-body .event-detail-btn {
   width: 100%;
   color: var(--ink);
   border-color: rgba(25, 25, 25, 0.4);
+  margin-top: auto;
+}
+
+@media (max-width: 860px) {
+  .event-card-v2 { flex: 0 0 100%; }
 }
 
 /* =======================================================
@@ -785,9 +860,21 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .hero-carousel {
   position: relative;
-  min-height: 560px;
+  min-height: calc(100vh - 112px);
   overflow: hidden;
   color: var(--white);
+}
+.hero-slide-counter {
+  position: absolute;
+  bottom: 24px;
+  right: 26px;
+  z-index: 5;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.75);
 }
 
 .hero-slide {
@@ -799,7 +886,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   display: flex;
   align-items: center;
 }
-.hero-slide.active { opacity: 1; visibility: visible; position: relative; }
+.hero-slide.active { opacity: 1; visibility: visible; }
 
 .hero-slide.grad-1 { background: radial-gradient(circle at 15% 20%, #4a1f18 0%, var(--zellige-deep) 55%), linear-gradient(135deg, var(--zellige-deep), #0a0a0a); }
 .hero-slide.grad-2 { background: radial-gradient(circle at 85% 25%, #6b2a20 0%, var(--zellige-deep) 55%), linear-gradient(135deg, var(--zellige-deep), #0a0a0a); }
@@ -874,15 +961,15 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   z-index: 5;
 }
 .hero-dot {
-  width: 10px; height: 10px;
-  border-radius: 50%;
+  width: 26px; height: 4px;
+  border-radius: 0;
   background: rgba(255,253,248,0.35);
   border: none;
   cursor: pointer;
   padding: 0;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease;
 }
-.hero-dot.active { background: var(--saffron); transform: scale(1.25); }
+.hero-dot.active { background: var(--saffron); }
 
 .hero-arrow {
   position: absolute;
@@ -906,12 +993,15 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 @media (max-width: 900px) {
   .hero-slide-inner { grid-template-columns: 1fr; padding: 50px 0 70px; }
-  .hero-arrow { display: none; }
-  .hero-carousel { min-height: 480px; }
+  .hero-arrow { width: 34px; height: 34px; top: auto; bottom: 20px; transform: none; }
+  .hero-arrow.prev { left: 16px; }
+  .hero-arrow.next { right: 16px; }
+  .hero-carousel { min-height: calc(100vh - 100px); }
   .hero-slide.hero-event-slide { align-items: flex-end; }
-  .hero-event-inner { max-width: none; padding: 0 0 44px; }
+  .hero-event-inner { max-width: none; padding: 0 0 56px; }
   .hero-event-scrim { background: linear-gradient(180deg, rgba(10,10,10,0.15) 0%, rgba(10,10,10,0.92) 68%); }
   .hero-event-inner .hero-actions { flex-direction: column; align-items: stretch; }
+  .hero-slide-counter { display: none; }
 }
 
 /* =======================================================
@@ -930,21 +1020,21 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .recipe-card-h {
   scroll-snap-align: start;
-  flex: 0 0 clamp(200px, 22vw, 220px);
-  text-align: center;
+  flex: 0 0 clamp(220px, 24vw, 250px);
+  text-align: left;
   transition: transform 0.2s ease;
 }
 .recipe-card-h:hover { transform: translateY(-4px); }
 
 .recipe-card-h-photo {
   position: relative;
-  width: 168px;
-  height: 168px;
-  border-radius: 50%;
-  margin: 0 auto 16px;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 0;
+  margin: 0 0 12px;
   overflow: hidden;
-  border: 5px solid var(--white);
-  box-shadow: var(--shadow-card);
+  border: none;
+  box-shadow: none;
 }
 .recipe-card-h-photo img {
   width: 100%; height: 100%;
@@ -953,39 +1043,40 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .recipe-cuisine-chip {
   position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-label);
-  font-size: 0.6rem;
-  letter-spacing: 0.05em;
+  top: 10px;
+  left: 10px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.64rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: rgba(20,20,18,0.65);
-  color: var(--white);
-  padding: 4px 10px;
-  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  padding: 4px 9px;
+  border-radius: 0;
   white-space: nowrap;
 }
 .recipe-fav-icon {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
   width: 30px; height: 30px;
-  border-radius: 50%;
-  background: rgba(255,253,248,0.92);
+  border-radius: 0;
+  background: var(--white);
   display: grid;
   place-items: center;
-  color: var(--paprika);
+  color: var(--saffron);
 }
 .recipe-fav-icon svg { width: 15px; height: 15px; }
 
-.recipe-card-h-body h3 { font-size: 0.98rem; margin-bottom: 6px; }
+.recipe-card-h-body h3 { font-size: 1.02rem; margin-bottom: 6px; }
 .recipe-meta-row {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
-  font-family: var(--font-label);
-  font-size: 0.72rem;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
   color: var(--ink-soft);
 }
 .recipe-meta-row span { display: flex; align-items: center; gap: 4px; }
@@ -2024,7 +2115,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
     display: flex; flex-direction: column;
     padding-left: 14px; margin-top: 2px;
   }
-  .nav-dropdown-menu a { padding: 8px 0; color: rgba(255,253,248,0.75); font-size: 0.92rem; }
+  .nav-dropdown-menu a { padding: 8px 0; color: var(--ink); font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
 }
 
 /* =======================================================
@@ -2398,31 +2489,31 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    Event details modal
    ======================================================= */
 
-.event-modal { max-width: 560px; }
+.event-modal { max-width: 560px; border-top-color: var(--saffron); }
+.event-modal .modal-close {
+  background: var(--white);
+  padding: 5px;
+  color: var(--ink);
+}
 .event-modal-image {
   width: 100%;
-  height: 210px;
+  height: 220px;
   object-fit: cover;
-  border-radius: 12px;
-  margin-bottom: 18px;
+  border-radius: 0;
   display: block;
 }
-.event-modal h2 { margin-bottom: 10px; font-size: 1.35rem; }
+.event-modal-body { padding: 24px 28px 28px; }
+.event-modal h2 { margin-bottom: 10px; font-size: 1.5rem; }
 .event-modal-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
+  gap: 4px 14px;
   margin-bottom: 16px;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--zellige-deep);
-}
-.event-modal-meta span {
-  display: inline-flex;
-  align-items: center;
-  background: var(--plaster);
-  padding: 6px 12px;
-  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--saffron);
 }
 .event-modal-description {
   font-size: 0.94rem;
@@ -2430,9 +2521,11 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   color: var(--ink-soft);
   margin: 0;
 }
+.event-modal-people { font-size: 0.85rem; color: var(--ink-soft); margin: 10px 0 0; }
 @media (max-width: 560px) {
   .event-modal-image { height: 150px; }
-  .event-modal h2 { font-size: 1.15rem; }
+  .event-modal-body { padding: 20px 22px 24px; }
+  .event-modal h2 { font-size: 1.2rem; }
 }
 
 /* =======================================================

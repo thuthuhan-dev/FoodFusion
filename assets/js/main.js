@@ -573,11 +573,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var heroIndex = 0;
   var heroTimer = null;
 
+  var heroCounter = document.getElementById('heroSlideCounter');
+
   function showHeroSlide(i) {
     if (!heroSlides.length) return;
     heroIndex = (i + heroSlides.length) % heroSlides.length;
     heroSlides.forEach(function (s, idx) { s.classList.toggle('active', idx === heroIndex); });
     heroDots.forEach(function (d, idx) { d.classList.toggle('active', idx === heroIndex); });
+    if (heroCounter) heroCounter.textContent = heroIndex + 1;
   }
 
   function startHeroAutoplay() {

@@ -51,6 +51,25 @@ if (empty($recentRecipes)) {
     ];
 }
 
+$spotlightPost = null;
+if ($pdo) {
+    try {
+        $stmt = $pdo->query(
+            "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name
+             FROM COMMUNITY_POST p
+             JOIN USERS u ON p.user_id = u.user_id
+             ORDER BY p.created_at DESC
+             LIMIT 1"
+        );
+        $spotlightPost = $stmt->fetch();
+    } catch (PDOException $e) {
+        $spotlightPost = null;
+    }
+}
+if (!$spotlightPost) {
+    $spotlightPost = ['post_id' => null, 'post_type' => 'Culinary Experience', 'post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
+}
+
 /* ---------- Popular recipes carousel ---------- */
 $popularRecipes = [];
 if ($pdo) {
@@ -374,23 +393,22 @@ if ($statUpcomingEventCount < 1) { $statUpcomingEventCount = count($events); }
 require_once 'includes/header.php';
 ?>
 
-<?php $heroEvents = array_slice($events, 0, 3); ?>
+<?php $heroRecipes = $recentRecipes; ?>
 <section class="hero-carousel">
 
-  <?php foreach ($heroEvents as $hi => $hEvent):
-    $hTs = strtotime($hEvent['event_date']);
-    $hImg = !empty($hEvent['image_url']) ? $hEvent['image_url'] : placeholder_img('event-' . $hEvent['event_id'], 1600, 700);
+  <?php foreach ($heroRecipes as $hi => $hRecipe):
+    $hImg = !empty($hRecipe['image_url']) ? $hRecipe['image_url'] : placeholder_img('recipe-' . $hRecipe['recipe_id'], 1600, 900);
   ?>
   <div class="hero-slide hero-event-slide<?php echo $hi === 0 ? ' active' : ''; ?>">
-    <img class="hero-event-photo" src="<?php echo htmlspecialchars($hImg); ?>" alt="<?php echo htmlspecialchars($hEvent['event_title']); ?>" loading="<?php echo $hi === 0 ? 'eager' : 'lazy'; ?>">
+    <img class="hero-event-photo" src="<?php echo htmlspecialchars($hImg); ?>" alt="<?php echo htmlspecialchars($hRecipe['recipe_name']); ?>" loading="<?php echo $hi === 0 ? 'eager' : 'lazy'; ?>">
     <div class="hero-event-scrim"></div>
     <div class="wrap hero-event-inner">
-      <span class="eyebrow">Upcoming event</span>
-      <h1><?php echo htmlspecialchars($hEvent['event_title']); ?> — <?php echo htmlspecialchars(date('j F', $hTs)); ?></h1>
-      <p class="lede"><?php echo htmlspecialchars(mb_strimwidth((string) $hEvent['description'], 0, 160, '…')); ?></p>
+      <span class="eyebrow">Featured recipe</span>
+      <h1><?php echo htmlspecialchars($hRecipe['recipe_name']); ?></h1>
+      <p class="lede"><?php echo htmlspecialchars($hRecipe['description']); ?></p>
       <div class="hero-actions">
-        <a href="#events" class="btn btn-primary">Reserve a place</a>
-        <a href="#events" class="btn btn-outline">All events</a>
+        <a href="recipe-detail.php?id=<?php echo (int) $hRecipe['recipe_id']; ?>" class="btn btn-primary">Read the recipe</a>
+        <a href="recipe-detail.php?id=<?php echo (int) $hRecipe['recipe_id']; ?>" class="btn btn-outline">Save for later</a>
       </div>
     </div>
   </div>
@@ -402,14 +420,14 @@ require_once 'includes/header.php';
   <button type="button" class="hero-arrow next" id="heroNext" aria-label="Next slide">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
   </button>
+  <span class="hero-slide-counter"><span id="heroSlideCounter">1</span>/<?php echo count($heroRecipes); ?> &middot; auto</span>
   <div class="hero-dots">
-    <?php foreach ($heroEvents as $hi => $_): ?>
+    <?php foreach ($heroRecipes as $hi => $_): ?>
       <button type="button" class="hero-dot<?php echo $hi === 0 ? ' active' : ''; ?>" aria-label="Slide <?php echo $hi + 1; ?>"></button>
     <?php endforeach; ?>
   </div>
 </section>
 
-<div class="divider-zellige" aria-hidden="true"></div>
 
 <!-- FoodFusion mission — required by the brief: a brief introduction to
      FoodFusion's mission on the landing page. -->
@@ -465,17 +483,46 @@ require_once 'includes/header.php';
     </div>
 
     <div class="kitchen-grid">
-      <?php foreach ($recentRecipes as $ki => $kRecipe):
-        $kImg = !empty($kRecipe['image_url']) ? $kRecipe['image_url'] : placeholder_img('recipe-' . $kRecipe['recipe_id'], 500, 360);
+      <?php
+        $feature = $recentRecipes[0];
+        $featureImg = !empty($feature['image_url']) ? $feature['image_url'] : placeholder_img('recipe-' . $feature['recipe_id'], 900, 700);
       ?>
-      <a href="recipe-detail.php?id=<?php echo (int) $kRecipe['recipe_id']; ?>" class="kitchen-card-flat<?php echo $ki === 0 ? ' first' : ''; ?>">
-        <div class="kitchen-card-flat-photo"><img src="<?php echo htmlspecialchars($kImg); ?>" alt="<?php echo htmlspecialchars($kRecipe['recipe_name']); ?>" loading="lazy"></div>
-        <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($kRecipe['category_name']); ?> &middot; <?php echo htmlspecialchars(relative_day_label($kRecipe['created_at'])); ?></span>
-        <h3><?php echo htmlspecialchars($kRecipe['recipe_name']); ?></h3>
-        <p><?php echo htmlspecialchars($kRecipe['description']); ?></p>
-        <span class="kitchen-card-flat-cta"><?php echo (int) $kRecipe['prep_time']; ?> min &middot; <?php echo htmlspecialchars($kRecipe['cuisine_name']); ?></span>
+      <a href="recipe-detail.php?id=<?php echo (int) $feature['recipe_id']; ?>" class="kitchen-feature">
+        <div class="kitchen-feature-photo"><img src="<?php echo htmlspecialchars($featureImg); ?>" alt="<?php echo htmlspecialchars($feature['recipe_name']); ?>" loading="lazy"></div>
+        <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($feature['category_name']); ?> &middot; <?php echo htmlspecialchars(relative_day_label($feature['created_at'])); ?></span>
+        <h3><?php echo htmlspecialchars($feature['recipe_name']); ?></h3>
+        <p><?php echo htmlspecialchars($feature['description']); ?></p>
+        <span class="kitchen-card-flat-cta">View recipe &rarr;</span>
       </a>
-      <?php endforeach; ?>
+
+      <div class="kitchen-side">
+        <?php if (isset($recentRecipes[1])): $second = $recentRecipes[1];
+          $secondImg = !empty($second['image_url']) ? $second['image_url'] : placeholder_img('recipe-' . $second['recipe_id'], 500, 360);
+        ?>
+        <a href="recipe-detail.php?id=<?php echo (int) $second['recipe_id']; ?>" class="kitchen-card">
+          <div class="kitchen-card-photo"><img src="<?php echo htmlspecialchars($secondImg); ?>" alt="<?php echo htmlspecialchars($second['recipe_name']); ?>" loading="lazy"></div>
+          <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($second['category_name']); ?> &middot; <?php echo htmlspecialchars(relative_day_label($second['created_at'])); ?></span>
+          <h3><?php echo htmlspecialchars($second['recipe_name']); ?></h3>
+          <p><?php echo htmlspecialchars($second['description']); ?></p>
+        </a>
+        <?php endif; ?>
+
+        <?php
+          $spotTab = ['Recipe' => 'recipe', 'Cooking Tip' => 'tip', 'Culinary Experience' => 'experience'][$spotlightPost['post_type'] ?? ''] ?? 'experience';
+          $spotHref = !empty($spotlightPost['post_id'])
+              ? 'post-detail.php?id=' . (int) $spotlightPost['post_id']
+              : 'community.php?tab=' . $spotTab;
+        ?>
+        <a href="<?php echo htmlspecialchars($spotHref); ?>" class="kitchen-card dark">
+          <span class="quote-mark">"</span>
+          <h3><?php echo htmlspecialchars($spotlightPost['post_title']); ?></h3>
+          <p><?php echo htmlspecialchars($spotlightPost['post_content']); ?></p>
+          <div class="author-row">
+            <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($spotlightPost['first_name'], 0, 2))); ?></span>
+            <span class="author-name"><?php echo htmlspecialchars($spotlightPost['first_name']); ?></span>
+          </div>
+        </a>
+      </div>
     </div>
   </div>
 </section>
@@ -691,27 +738,29 @@ require_once 'includes/header.php';
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <img id="eventModalImage" class="event-modal-image" src="" alt="">
-    <h2 id="eventModalTitle"></h2>
-    <div class="event-modal-meta">
-      <span id="eventModalDate"></span>
-      <span id="eventModalLocation"></span>
+    <div class="event-modal-body">
+      <h2 id="eventModalTitle"></h2>
+      <div class="event-modal-meta">
+        <span id="eventModalDate"></span>
+        <span id="eventModalLocation"></span>
+      </div>
+      <p id="eventModalDescription" class="event-modal-description"></p>
+
+      <p id="eventModalPeople" class="event-modal-people"></p>
+
+      <form method="POST" action="index.php#events" id="eventJoinForm" style="display:none;">
+        <input type="hidden" name="action" value="toggle_participation">
+        <input type="hidden" name="event_id" id="eventJoinEventId" value="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+        <button type="submit" id="eventJoinBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Join this event</button>
+      </form>
+      <a href="#" data-open-modal="loginModal" id="eventJoinLoginPrompt" class="btn btn-primary" style="display:none; width:100%; margin-top:6px; justify-content:center;">Log in to join this event</a>
+
+      <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:10px; width:100%; justify-content:center;">
+        <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Edit this event
+      </button>
     </div>
-    <p id="eventModalDescription" class="event-modal-description"></p>
-
-    <p id="eventModalPeople" class="event-modal-people"></p>
-
-    <form method="POST" action="index.php#events" id="eventJoinForm" style="display:none;">
-      <input type="hidden" name="action" value="toggle_participation">
-      <input type="hidden" name="event_id" id="eventJoinEventId" value="">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
-      <button type="submit" id="eventJoinBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Join this event</button>
-    </form>
-    <a href="#" data-open-modal="loginModal" id="eventJoinLoginPrompt" class="btn btn-primary" style="display:none; width:100%; margin-top:6px; justify-content:center;">Log in to join this event</a>
-
-    <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:10px; width:100%; justify-content:center;">
-      <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-      Edit this event
-    </button>
   </div>
 </div>
 

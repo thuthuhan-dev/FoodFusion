@@ -83,8 +83,8 @@ unset($_SESSION['auth_old']);
         <li><a href="contact.php">Contact Us</a></li>
         <li class="mobile-nav-cta">
           <?php if (!empty($_SESSION['user_id'])): ?>
-            <a href="account.php" class="btn btn-outline">My Account</a>
-            <a href="logout.php" class="btn btn-outline">Log out</a>
+            <a href="account.php" class="btn btn-primary">My Account</a>
+            <a href="logout.php" class="mobile-nav-secondary">Log out</a>
           <?php else: ?>
             <a href="login.php" class="btn btn-outline" data-open-modal="loginModal">Log in</a>
           <?php endif; ?>
