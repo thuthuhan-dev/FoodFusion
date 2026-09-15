@@ -15,6 +15,8 @@ $authError = $_SESSION['auth_error'] ?? null;
 unset($_SESSION['auth_error']);
 $authOld = $_SESSION['auth_old'] ?? [];
 unset($_SESSION['auth_old']);
+
+$currentPage = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,24 +68,16 @@ unset($_SESSION['auth_old']);
   <nav class="nav-row" aria-label="Primary">
     <div class="wrap">
       <ul class="nav-links" id="navLinks">
-        <li><a href="index.php">Home</a></li>
-        <li><a href="about.php">About Us</a></li>
-        <li><a href="recipes.php">Recipe Collection</a></li>
-        <li><a href="community.php">Community Cookbook</a></li>
-        <li class="nav-dropdown">
-          <button type="button" class="nav-dropdown-trigger">
-            Resources
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
-          </button>
-          <div class="nav-dropdown-menu">
-            <a href="resources.php">Culinary Resources</a>
-            <a href="education.php">Educational Resources</a>
-          </div>
-        </li>
-        <li><a href="contact.php">Contact Us</a></li>
+        <li><a href="index.php" class="<?php echo $currentPage === 'index.php' ? 'active' : ''; ?>">Home</a></li>
+        <li><a href="about.php" class="<?php echo $currentPage === 'about.php' ? 'active' : ''; ?>">About Us</a></li>
+        <li><a href="recipes.php" class="<?php echo $currentPage === 'recipes.php' ? 'active' : ''; ?>">Recipe Collection</a></li>
+        <li><a href="community.php" class="<?php echo $currentPage === 'community.php' ? 'active' : ''; ?>">Community Cookbook</a></li>
+        <li><a href="resources.php" class="<?php echo $currentPage === 'resources.php' ? 'active' : ''; ?>">Culinary Resources</a></li>
+        <li><a href="education.php" class="<?php echo $currentPage === 'education.php' ? 'active' : ''; ?>">Educational Resources</a></li>
+        <li><a href="contact.php" class="<?php echo $currentPage === 'contact.php' ? 'active' : ''; ?>">Contact Us</a></li>
         <li class="mobile-nav-cta">
           <?php if (!empty($_SESSION['user_id'])): ?>
-            <a href="account.php" class="btn btn-primary">My Account</a>
+            <a href="account.php" class="mobile-nav-primary">My Account</a>
             <a href="logout.php" class="mobile-nav-secondary">Log out</a>
           <?php else: ?>
             <a href="login.php" class="btn btn-outline" data-open-modal="loginModal">Log in</a>

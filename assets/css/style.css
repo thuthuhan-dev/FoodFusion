@@ -30,7 +30,7 @@
   --shadow-card: none;
   --shadow-modal: 0 18px 50px rgba(0, 0, 0, 0.3);
 
-  --maxw: 1180px;
+  --maxw: 1600px;
 }
 
 * { box-sizing: border-box; }
@@ -213,15 +213,28 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .nav-links a:hover,
 .nav-links a:focus-visible { color: var(--saffron); }
+.nav-links a.active { color: var(--saffron); }
+
+/* Seven flat nav links no longer fit on one line below ~1080px without
+   shrinking — narrower than that but still desktop-width (the drawer
+   takes over at 860px). */
+@media (min-width: 861px) and (max-width: 1080px) {
+  .nav-links { gap: 14px; }
+  .nav-links a { font-size: 0.66rem; letter-spacing: 0.03em; }
+}
 
 .nav-actions { display: flex; align-items: center; gap: 14px; }
 .nav-actions a.btn-ghost { white-space: nowrap; }
 
 .nav-login-btn {
+  height: 42px;
+  padding-top: 0;
+  padding-bottom: 0;
   color: var(--ink);
   border-color: var(--ink);
 }
 .nav-login-btn:hover { background: var(--ink); color: var(--white); }
+.nav-top-right { height: 42px; }
 
 .nav-toggle {
   display: none;
@@ -249,6 +262,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   letter-spacing: 0.08em;
 }
 .mobile-nav-cta a.btn-outline { color: var(--ink); border-color: rgba(25,25,25,0.35); }
+.mobile-nav-primary {
+  display: block;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+}
+.mobile-nav-primary:hover { color: var(--saffron); }
 .mobile-nav-secondary {
   display: block;
   text-align: center;
@@ -348,7 +372,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .events-head-arrows { margin: 0; align-items: center; }
 .section-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 36px;
@@ -1018,13 +1042,24 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .recipe-carousel-track::-webkit-scrollbar { display: none; }
 
+/* Sized so exactly 4 cards fill the track width — same approach as the
+   event carousel: no partial card peeking in at the edge. */
 .recipe-card-h {
   scroll-snap-align: start;
-  flex: 0 0 clamp(220px, 24vw, 250px);
+  flex: 0 0 calc((100% - 3 * 20px) / 4);
   text-align: left;
   transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
 .recipe-card-h:hover { transform: translateY(-4px); }
+
+@media (max-width: 860px) {
+  .recipe-card-h { flex: 0 0 calc((100% - 20px) / 2); }
+}
+@media (max-width: 560px) {
+  .recipe-card-h { flex: 0 0 100%; }
+}
 
 .recipe-card-h-photo {
   position: relative;
@@ -1174,11 +1209,12 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   padding: 56px 0 40px;
   position: relative;
   overflow: hidden;
+  border-bottom: 3px solid var(--ink);
 }
 .page-header::before {
   content: "";
   position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%231f5a3d' stroke-opacity='0.07' stroke-width='1.2'%3E%3Cpath d='M42 2 L82 42 L42 82 L2 42 Z'/%3E%3Cpath d='M42 2 L62 22 L42 42 L22 22 Z'/%3E%3Cpath d='M42 82 L62 62 L42 42 L22 62 Z'/%3E%3Cpath d='M2 42 L22 22 L42 42 L22 62 Z'/%3E%3Cpath d='M82 42 L62 22 L42 42 L62 62 Z'/%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23b3372b' stroke-opacity='0.09' stroke-width='1.2'%3E%3Cpath d='M42 2 L82 42 L42 82 L2 42 Z'/%3E%3Cpath d='M42 2 L62 22 L42 42 L22 22 Z'/%3E%3Cpath d='M42 82 L62 62 L42 42 L22 62 Z'/%3E%3Cpath d='M2 42 L22 22 L42 42 L22 62 Z'/%3E%3Cpath d='M82 42 L62 22 L42 42 L62 62 Z'/%3E%3C/g%3E%3C/svg%3E");
   background-size: 84px 84px;
   pointer-events: none;
 }
@@ -1671,16 +1707,18 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    Header search + user menu
    ======================================================= */
 
-.site-search { position: relative; flex: 0 0 200px; margin: 0 16px; }
+.site-search { position: relative; flex: 0 0 200px; margin: 0 16px; height: 42px; }
 .site-search input {
   width: 100%;
-  padding: 9px 14px 9px 38px;
+  height: 100%;
+  padding: 0 14px 0 38px;
   border-radius: 0;
   border: 1.5px solid var(--ink);
   background: var(--white);
   color: var(--ink);
   font-size: 0.85rem;
   font-family: var(--font-body);
+  box-sizing: border-box;
 }
 .site-search input::placeholder { color: var(--ink-soft); }
 .site-search input:focus-visible { outline: 2px solid var(--saffron); }
@@ -1954,19 +1992,22 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .contact-form-card {
   background: var(--white);
-  border: 1px solid rgba(25,25,25,0.1);
-  border-radius: var(--radius);
-  padding: 32px;
-  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(25,25,25,0.12);
+  border-top: 4px solid var(--saffron);
+  border-radius: 0;
+  padding: 36px;
+  box-shadow: none;
 }
+.contact-form-card > .eyebrow,
+.contact-form-card > h2 { margin-bottom: 4px; }
 .contact-form-card select {
   width: 100%;
   padding: 11px 13px;
-  border-radius: 9px;
-  border: 1px solid rgba(25,25,25,0.22);
+  border-radius: 0;
+  border: 1.5px solid rgba(25,25,25,0.28);
   font-family: var(--font-body);
   font-size: 0.95rem;
-  background: var(--plaster);
+  background: var(--white);
   color: var(--ink);
 }
 
@@ -1978,21 +2019,30 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .contact-info-item:last-child { border-bottom: none; }
 .contact-info-item .icon-badge {
-  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-  background: var(--plaster-deep); color: var(--zellige);
+  width: 38px; height: 38px; border-radius: 0; flex-shrink: 0;
+  background: var(--plaster); color: var(--saffron);
+  border: 1.5px solid rgba(25,25,25,0.14);
   display: grid; place-items: center;
 }
-.contact-info-item h4 { font-size: 0.9rem; margin: 0 0 2px; }
-.contact-info-item p { font-size: 0.85rem; color: var(--ink-soft); margin: 0; }
+.contact-info-item h4 {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  margin: 0 0 4px;
+}
+.contact-info-item p { font-size: 0.92rem; color: var(--ink); margin: 0; font-weight: 600; }
 
 .success-banner {
-  background: rgba(63,125,104,0.08);
-  border: 1px solid rgba(63,125,104,0.3);
-  border-radius: 10px;
+  background: #eef6f1;
+  border: none;
+  border-left: 3px solid #3f7d68;
+  border-radius: 0;
   padding: 16px 18px;
   margin-bottom: 20px;
 }
-.success-banner p { color: var(--mint); font-size: 0.9rem; margin: 0; font-weight: 600; }
+.success-banner p { color: #285c4a; font-size: 0.9rem; margin: 0; font-weight: 600; }
 
 /* =======================================================
    Culinary Resources
@@ -2746,14 +2796,21 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    ======================================================= */
 
 .recipe-card-h-link {
-  display: block;
+  display: flex;
+  flex-direction: column;
   color: inherit;
   text-decoration: none;
   height: 100%;
 }
+.recipe-card-h-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
 .recipe-card-h-cta {
   display: inline-block;
-  margin-top: 8px;
+  margin-top: auto;
+  padding-top: 8px;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--saffron);
