@@ -172,34 +172,31 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 
 .brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--ink);
 }
 
-.brand-mark {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  /* The mark is now an SVG logo, so no background or letter styling here. */
+.nav-top-right {
+  display: flex;
+  align-items: center;
 }
-.brand-mark svg {
-  width: 30px;
-  height: 30px;
-  display: block;
-  border-radius: 8px;
+
+/* Second header row — the full-width nav link bar sitting under the
+   brand/search/login row, wordmark-only per the design (no icon). */
+.nav-row { border-top: none; }
+@media (min-width: 861px) {
+  .nav-row {
+    border-top: 1px solid rgba(25, 25, 25, 0.14);
+  }
+  .nav-row .wrap { padding: 10px 0; }
 }
 
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 24px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -209,7 +206,9 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .nav-links a {
   color: var(--ink);
   font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 0.76rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
   transition: color 0.15s ease;
 }
 .nav-links a:hover,
@@ -217,6 +216,12 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .nav-actions { display: flex; align-items: center; gap: 14px; }
 .nav-actions a.btn-ghost { white-space: nowrap; }
+
+.nav-login-btn {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.nav-login-btn:hover { background: var(--ink); color: var(--white); }
 
 .nav-toggle {
   display: none;
@@ -323,6 +328,8 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    ======================================================= */
 
 .section { padding: 76px 0; }
+.events-head-actions { display: flex; align-items: center; gap: 12px; }
+.events-head-arrows { margin: 0; }
 .section-head {
   display: flex;
   align-items: flex-end;
@@ -666,104 +673,67 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .kitchen-grid {
   display: grid;
-  grid-template-columns: 1.5fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr;
   gap: 24px;
+  align-items: start;
 }
 
-.kitchen-feature {
-  position: relative;
-  border-radius: var(--radius);
-  overflow: hidden;
-  min-height: 420px;
-  display: flex;
-  align-items: flex-end;
-  box-shadow: var(--shadow-card);
-}
-.kitchen-feature .visual-bg {
-  position: absolute; inset: 0;
-}
-.kitchen-feature .visual-bg img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-}
-.kitchen-feature .scrim {
-  position: absolute; inset: 0;
-  background: linear-gradient(0deg, rgba(10,20,25,0.82) 0%, rgba(10,20,25,0.15) 55%, transparent 75%);
-}
-.kitchen-feature-body { position: relative; padding: 28px; color: var(--white); }
-.kitchen-badges { display: flex; gap: 8px; margin-bottom: 14px; }
 .badge {
   font-family: var(--font-label);
   font-size: 0.68rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius: 0;
   background: rgba(255,253,248,0.16);
   color: var(--white);
   border: 1px solid rgba(255,253,248,0.35);
 }
 .badge-solid { background: var(--saffron); color: var(--white); border-color: transparent; }
-.kitchen-feature h3 { color: var(--white); font-size: 1.5rem; margin-bottom: 8px; }
-.kitchen-feature p { color: rgba(255,253,248,0.85); font-size: 0.94rem; max-width: 46ch; }
-.kitchen-feature .news-link { color: var(--saffron); }
 
-.kitchen-side { display: flex; flex-direction: column; gap: 24px; }
-
-.kitchen-card {
-  background: var(--white);
-  border-radius: var(--radius);
-  padding: 22px;
-  border: 1px solid rgba(25, 25, 25, 0.1);
-  box-shadow: var(--shadow-card);
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* Flat recipe cards — image, category/time meta line, serif title,
+   description, prep-time/cuisine footer. First card runs larger. */
+.kitchen-card-flat {
+  display: block;
+  color: inherit;
 }
-.kitchen-card.dark {
-  background: var(--zellige-deep);
-  color: var(--white);
-  border: none;
+.kitchen-card-flat-photo {
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
-.kitchen-card.dark h3 { color: var(--white); }
-.kitchen-card.dark p { color: rgba(255,253,248,0.78); }
-.kitchen-card.dark .news-link { color: var(--saffron); }
-.kitchen-card.dark .quote-mark {
-  font-family: var(--font-display);
-  font-size: 3.2rem;
-  line-height: 1;
-  color: var(--saffron);
-  opacity: 0.5;
-  margin-bottom: -14px;
-}
-
-.kitchen-card h3 { font-size: 1.05rem; margin-top: 6px; }
-.kitchen-card p { font-size: 0.88rem; flex: 1; }
-
-.author-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 14px;
-}
-.author-avatar {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: var(--saffron);
-  color: var(--white);
-  display: grid;
-  place-items: center;
-  font-family: var(--font-label);
-  font-size: 0.72rem;
+.kitchen-card-flat.first .kitchen-card-flat-photo { aspect-ratio: 16 / 10; }
+.kitchen-card-flat-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kitchen-card-flat-meta {
+  display: block;
   font-weight: 700;
-  flex-shrink: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--saffron);
+  margin-bottom: 7px;
 }
-.author-name { font-size: 0.82rem; font-weight: 600; }
+.kitchen-card-flat h3 {
+  font-size: 1.15rem;
+  margin-bottom: 8px;
+  color: var(--ink);
+}
+.kitchen-card-flat.first h3 { font-size: 1.5rem; }
+.kitchen-card-flat p {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  margin-bottom: 0;
+}
+.kitchen-card-flat-cta {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
 
 @media (max-width: 900px) {
   .kitchen-grid { grid-template-columns: 1fr; }
-  .kitchen-feature { min-height: 320px; }
 }
 
 /* Event cards with photo top */
@@ -772,10 +742,9 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   scroll-snap-align: start;
   flex: 0 0 clamp(250px, 30vw, 300px);
   background: var(--white);
-  border-radius: var(--radius);
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid rgba(25, 25, 25, 0.1);
-  box-shadow: var(--shadow-card);
+  border: 1px solid rgba(25, 25, 25, 0.16);
 }
 .event-photo {
   height: 140px;
@@ -787,27 +756,28 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   object-fit: cover;
   display: block;
 }
-.event-date-chip {
-  position: absolute;
-  top: 12px; right: 12px;
-  background: var(--white);
-  border-radius: 10px;
-  padding: 6px 10px;
-  text-align: center;
-  font-family: var(--font-label);
-  box-shadow: 0 6px 16px -6px rgba(0,0,0,0.35);
-}
-.event-date-chip .day { font-size: 1.05rem; font-weight: 700; line-height: 1; color: var(--zellige-deep); }
-.event-date-chip .mon { font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--paprika); }
-.event-card-v2-body { padding: 18px 20px 22px; }
+.event-card-v2-body { padding: 16px 18px 20px; }
 /* The card is always white regardless of the section behind it (currently
    .section-dark), which sets a near-white text color for the whole section.
    Without this, the title inherits that near-white color onto a white card
    and becomes almost invisible. */
 .event-card-v2-body { color: var(--ink); }
-.event-card-v2-body h3 { font-size: 1.02rem; margin-bottom: 4px; color: var(--ink); }
-.event-card-v2-body .event-loc { display: block; margin-bottom: 14px; color: var(--ink-soft); }
-.event-card-v2-body .btn { width: 100%; }
+.event-meta-line {
+  display: block;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--saffron);
+  margin-bottom: 7px;
+}
+.event-card-v2-body h3 { font-size: 1.05rem; margin-bottom: 6px; color: var(--ink); }
+.event-card-v2-body p { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 10px; }
+.event-card-v2-body .event-detail-btn {
+  width: 100%;
+  color: var(--ink);
+  border-color: rgba(25, 25, 25, 0.4);
+}
 
 /* =======================================================
    Hero carousel — full-bleed, rotating, saturated
@@ -855,6 +825,29 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .hero-slide .lede { color: rgba(255,253,248,0.85); max-width: 46ch; font-size: 1.05rem; }
 .hero-slide .eyebrow { color: var(--accent-soft); }
 .hero-slide .eyebrow::before { background: var(--accent-soft); }
+
+/* Event-spotlight hero — a full-bleed photo of the upcoming event with a
+   dark scrim, replacing the old side-by-side marketing-copy layout. */
+.hero-event-slide { overflow: hidden; }
+.hero-event-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hero-event-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(10,10,10,0.88) 0%, rgba(10,10,10,0.62) 45%, rgba(10,10,10,0.2) 100%);
+}
+.hero-event-inner {
+  position: relative;
+  max-width: 620px;
+  padding: 70px 0;
+}
+.hero-event-inner h1 { font-size: clamp(1.9rem, 3.6vw, 2.9rem); }
 
 .hero-visual-slide {
   border-radius: 22px;
@@ -914,6 +907,11 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 @media (max-width: 900px) {
   .hero-slide-inner { grid-template-columns: 1fr; padding: 50px 0 70px; }
   .hero-arrow { display: none; }
+  .hero-carousel { min-height: 480px; }
+  .hero-slide.hero-event-slide { align-items: flex-end; }
+  .hero-event-inner { max-width: none; padding: 0 0 44px; }
+  .hero-event-scrim { background: linear-gradient(180deg, rgba(10,10,10,0.15) 0%, rgba(10,10,10,0.92) 68%); }
+  .hero-event-inner .hero-actions { flex-direction: column; align-items: stretch; }
 }
 
 /* =======================================================
@@ -2820,6 +2818,39 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .mission-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
+.mission-stats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(25, 25, 25, 0.14);
+  border: 1px solid rgba(25, 25, 25, 0.14);
+  align-self: start;
+}
+.mission-stats li {
+  background: var(--white);
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mission-stats strong {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.mission-stats .mission-stat-accent strong { color: var(--saffron); }
+.mission-stats span {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
 .mission-values {
   list-style: none;
   margin: 0;
@@ -2880,52 +2911,51 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   max-width: 440px;
   padding: 0;
   overflow: hidden;
+  border-top: 4px solid var(--ink);
 }
+#joinModal .modal { border-top-color: var(--saffron); }
 
-/* Branded header band at the top of each auth modal — brick for Join Us,
-   near-black for Log in, echoing the design's colored top accent border. */
+/* Flat header block at the top of each auth modal — no band, no mark,
+   just a small eyebrow + left-aligned heading on the white modal body,
+   with the colored accent living in the modal's own top border. */
 .modal-brand {
-  background: var(--ink);
-  padding: 30px 32px 26px;
-  text-align: center;
-  color: var(--white);
+  padding: 26px 32px 0;
+  text-align: left;
+  color: var(--ink);
 }
-#joinModal .modal-brand { background: linear-gradient(165deg, var(--saffron), var(--saffron-deep)); }
-.modal-brand-mark {
-  display: inline-grid;
-  place-items: center;
-  margin-bottom: 12px;
-}
-.modal-brand-mark svg {
-  border-radius: 12px;
-  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.45);
-  background: var(--white);
-  padding: 2px;
+.modal-brand-mark { display: none; }
+.modal-eyebrow {
+  display: block;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--saffron);
+  margin-bottom: 8px;
 }
 .modal-brand h2 {
-  color: var(--white);
-  font-size: 1.4rem;
+  color: var(--ink);
+  font-size: 1.6rem;
   margin: 0 0 6px;
 }
 .modal-sub {
   font-size: 0.87rem;
   line-height: 1.55;
-  color: rgba(255, 253, 248, 0.82);
+  color: var(--ink-soft);
   margin: 0;
-  max-width: 30ch;
-  margin-inline: auto;
 }
 
-/* The form body sits below the band */
-.modal form { padding: 26px 32px 0; }
+/* The form body sits below the header block */
+.modal form { padding: 20px 32px 0; }
 .modal .modal-switch { padding: 0 32px 26px; margin-top: 18px; }
 .modal .form-note { padding-inline: 0; }
 
 .modal-close {
-  color: rgba(255, 253, 248, 0.9);
+  color: var(--ink-soft);
   z-index: 3;
 }
-.modal-close:hover { color: var(--white); }
+.modal-close:hover { color: var(--ink); }
 
 .btn-block { width: 100%; justify-content: center; }
 
@@ -2958,9 +2988,9 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 
 @media (max-width: 460px) {
-  .modal-brand { padding: 24px 22px 20px; }
-  .modal-brand h2 { font-size: 1.2rem; }
-  .modal form { padding: 22px 22px 0; }
+  .modal-brand { padding: 22px 22px 0; }
+  .modal-brand h2 { font-size: 1.3rem; }
+  .modal form { padding: 18px 22px 0; }
   .modal .modal-switch { padding: 0 22px 22px; }
   .field-row { grid-template-columns: 1fr; }
 }
