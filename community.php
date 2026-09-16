@@ -517,7 +517,7 @@ require_once 'includes/header.php';
                 <input type="hidden" name="page" value="<?php echo (int) $page; ?>">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
                 <button type="submit" class="post-like-btn <?php echo $post['liked_by_me'] ? 'active' : ''; ?>" <?php echo empty($_SESSION['user_id']) ? 'disabled title="Log in to like"' : ''; ?>>
-                  <svg viewBox="0 0 24 24" fill="<?php echo $post['liked_by_me'] ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 4 2.2C10.5 6.2 12 5 14 5c3.5 0 5.5 3.5 3.5 7.5C15 16.5 12 21 12 21z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="<?php echo $post['liked_by_me'] ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                   <span class="action-count"><?php echo (int) $post['like_count']; ?></span>
                 </button>
               </form>

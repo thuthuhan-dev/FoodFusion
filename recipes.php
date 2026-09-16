@@ -12,6 +12,7 @@ $filterCategory = isset($_GET['category']) && $_GET['category'] !== '' ? (int) $
 $filterDifficulty = isset($_GET['difficulty']) && $_GET['difficulty'] !== '' ? (int) $_GET['difficulty'] : null;
 $filterDietary  = isset($_GET['dietary']) && $_GET['dietary'] !== '' ? (int) $_GET['dietary'] : null;
 $searchTerm     = isset($_GET['q']) ? trim($_GET['q']) : '';
+$activeFilterCount = (int) ($filterCuisine !== null) + (int) ($filterCategory !== null) + (int) ($filterDifficulty !== null) + (int) ($filterDietary !== null);
 
 $page = isset($_GET['page']) && (int) $_GET['page'] > 0 ? (int) $_GET['page'] : 1;
 $perPage = 6;
@@ -558,55 +559,67 @@ require_once 'includes/header.php';
   <?php endif; ?>
 
   <form class="filter-bar" method="GET" action="recipes.php">
-    <div class="filter-field">
-      <label for="q">Search</label>
-      <input type="text" id="q" name="q" placeholder="Search recipes…" value="<?php echo htmlspecialchars($searchTerm); ?>">
+    <div class="filter-bar-top">
+      <div class="filter-field filter-field-search">
+        <label for="q">Search</label>
+        <input type="text" id="q" name="q" placeholder="Search recipes…" value="<?php echo htmlspecialchars($searchTerm); ?>">
+      </div>
+      <button type="button" class="filter-toggle-btn" data-toggle-panel="filterPanel" aria-expanded="false" aria-controls="filterPanel">
+        Filters
+        <?php if ($activeFilterCount > 0): ?><span class="filter-active-count"><?php echo $activeFilterCount; ?></span><?php endif; ?>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button type="submit" class="btn btn-primary">Apply</button>
     </div>
-    <div class="filter-field">
-      <label for="cuisine">Cuisine</label>
-      <select id="cuisine" name="cuisine">
-        <option value="">All cuisines</option>
-        <?php foreach ($cuisines as $c): ?>
-          <option value="<?php echo $c['cuisine_id']; ?>" <?php echo $filterCuisine === (int) $c['cuisine_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($c['cuisine_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
+
+    <div class="filter-panel" id="filterPanel">
+      <div class="filter-field">
+        <label for="cuisine">Cuisine</label>
+        <select id="cuisine" name="cuisine">
+          <option value="">All cuisines</option>
+          <?php foreach ($cuisines as $c): ?>
+            <option value="<?php echo $c['cuisine_id']; ?>" <?php echo $filterCuisine === (int) $c['cuisine_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($c['cuisine_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">All categories</option>
+          <?php foreach ($categories as $c): ?>
+            <option value="<?php echo $c['category_id']; ?>" <?php echo $filterCategory === (int) $c['category_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($c['category_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty">
+          <option value="">Any difficulty</option>
+          <?php foreach ($difficulties as $d): ?>
+            <option value="<?php echo $d['difficulty_id']; ?>" <?php echo $filterDifficulty === (int) $d['difficulty_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($d['difficulty_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="dietary">Dietary</label>
+        <select id="dietary" name="dietary">
+          <option value="">Any dietary need</option>
+          <?php foreach ($dietaryOptions as $dt): ?>
+            <option value="<?php echo $dt['dietary_id']; ?>" <?php echo $filterDietary === (int) $dt['dietary_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($dt['dietary_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary filter-panel-apply">Apply filters</button>
     </div>
-    <div class="filter-field">
-      <label for="category">Category</label>
-      <select id="category" name="category">
-        <option value="">All categories</option>
-        <?php foreach ($categories as $c): ?>
-          <option value="<?php echo $c['category_id']; ?>" <?php echo $filterCategory === (int) $c['category_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($c['category_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label for="difficulty">Difficulty</label>
-      <select id="difficulty" name="difficulty">
-        <option value="">Any difficulty</option>
-        <?php foreach ($difficulties as $d): ?>
-          <option value="<?php echo $d['difficulty_id']; ?>" <?php echo $filterDifficulty === (int) $d['difficulty_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($d['difficulty_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label for="dietary">Dietary</label>
-      <select id="dietary" name="dietary">
-        <option value="">Any dietary need</option>
-        <?php foreach ($dietaryOptions as $dt): ?>
-          <option value="<?php echo $dt['dietary_id']; ?>" <?php echo $filterDietary === (int) $dt['dietary_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($dt['dietary_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <button type="submit" class="btn btn-primary">Filter</button>
+
     <?php if ($filterCuisine || $filterCategory || $filterDifficulty || $filterDietary || $searchTerm !== ''): ?>
       <div class="filter-clear"><a href="recipes.php">Clear all filters</a></div>
     <?php endif; ?>

@@ -80,7 +80,7 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
             <a href="account.php" class="mobile-nav-primary">My Account</a>
             <a href="logout.php" class="mobile-nav-secondary">Log out</a>
           <?php else: ?>
-            <a href="login.php" class="btn btn-outline" data-open-modal="loginModal">Log in</a>
+            <a href="login.php" class="mobile-nav-primary" data-open-modal="loginModal">Log in</a>
           <?php endif; ?>
         </li>
       </ul>
