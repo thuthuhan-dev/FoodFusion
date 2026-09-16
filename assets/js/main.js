@@ -452,6 +452,14 @@ document.addEventListener('DOMContentLoaded', function () {
           } : null;
         }
 
+        var eventDeleteForm = document.getElementById('eventDeleteForm');
+        var eventDeleteEventId = document.getElementById('eventDeleteEventId');
+        if (eventDeleteForm) {
+          var canDelete = btn.getAttribute('data-can-edit') === '1';
+          eventDeleteForm.style.display = canDelete ? 'block' : 'none';
+          if (canDelete) eventDeleteEventId.value = btn.getAttribute('data-event-id') || '';
+        }
+
         // Organizer name + headcount, and the Join / Leave control.
         var organizerName = btn.getAttribute('data-organizer-name') || '';
         var goingCount = parseInt(btn.getAttribute('data-going-count') || '0', 10);

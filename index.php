@@ -232,6 +232,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
     }
 }
 
+/* ---------- Delete an event (organizer only) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_event') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['event_id'] ?? 0);
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken)) {
+        $eventError = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eventError = 'Log in to manage events.';
+    } elseif ($pdo && $targetId > 0) {
+        try {
+            // Ownership check: same organizer test as edit_event above.
+            $orgCheck = $pdo->prepare(
+                "SELECT 1 FROM EVENT_PARTICIPANT ep
+                 JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+                 WHERE ep.event_id = ? AND ep.user_id = ? AND er.role_name = 'Organizer'"
+            );
+            $orgCheck->execute([$targetId, $_SESSION['user_id']]);
+            $isOrganizer = (bool) $orgCheck->fetch();
+
+            if (!$isOrganizer) {
+                $eventError = 'You can only delete events you organized.';
+            } else {
+                $imgStmt = $pdo->prepare('SELECT image_url FROM EVENT WHERE event_id = ?');
+                $imgStmt->execute([$targetId]);
+                $oldImage = $imgStmt->fetchColumn();
+
+                $pdo->beginTransaction();
+
+                // Remove everyone's participation (organizer + participants)
+                // before removing the event itself.
+                $pdo->prepare('DELETE FROM EVENT_PARTICIPANT WHERE event_id = ?')->execute([$targetId]);
+                $del = $pdo->prepare('DELETE FROM EVENT WHERE event_id = ?');
+                $del->execute([$targetId]);
+
+                $pdo->commit();
+
+                if ($del->rowCount() > 0 && !empty($oldImage)) {
+                    delete_uploaded_file($oldImage);
+                }
+
+                header('Location: index.php?event_deleted=1#events');
+                exit;
+            }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('FoodFusion delete_event: ' . $e->getMessage());
+            $eventError = 'Something went wrong deleting that event. Please try again.';
+        }
+    }
+}
+
 /* ---------- Join / leave an event (Participant role) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggle_participation') {
     $submittedToken = $_POST['csrf_token'] ?? '';
@@ -270,6 +322,9 @@ if (isset($_GET['event_added'])) {
 }
 if (isset($_GET['event_updated'])) {
     $eventSuccess = 'Your event has been updated.';
+}
+if (isset($_GET['event_deleted'])) {
+    $eventSuccess = 'Your event has been deleted.';
 }
 
 /* ---------- Upcoming events ---------- */
@@ -760,6 +815,18 @@ require_once 'includes/header.php';
         <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
         Edit this event
       </button>
+
+      <form method="POST" action="index.php#events" id="eventDeleteForm"
+            data-confirm="Delete this event? Everyone's RSVP will be removed too. This can't be undone."
+            style="display:none; margin-top:8px;">
+        <input type="hidden" name="action" value="delete_event">
+        <input type="hidden" name="event_id" id="eventDeleteEventId" value="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+        <button type="submit" class="delete-recipe-btn" style="width:100%; justify-content:center;">
+          <svg viewBox="0 0 24 24" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m2 0v13a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/></svg>
+          Delete this event
+        </button>
+      </form>
     </div>
   </div>
 </div>

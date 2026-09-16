@@ -633,6 +633,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   font-family: var(--font-body);
   font-size: 0.95rem;
   background: var(--white);
+  color: var(--ink);
 }
 .field input:focus-visible {
   outline: 2px solid var(--zellige);
@@ -747,7 +748,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 24px;
-  align-items: start;
 }
 
 .badge {
@@ -787,12 +787,14 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 /* Capped so the box can't grow unbounded on wide screens (the 1.5fr
    grid column has no width limit of its own). */
 .kitchen-feature-photo {
+  width: 100%;
   aspect-ratio: 16 / 10;
-  max-height: 300px;
+  max-height: 380px;
   overflow: hidden;
   margin-bottom: 14px;
 }
 .kitchen-card-photo {
+  width: 100%;
   aspect-ratio: 16 / 10;
   max-height: 180px;
   overflow: hidden;
@@ -1365,7 +1367,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .filter-clear a { color: var(--saffron); font-weight: 600; }
 
 .filter-chips {
-  display: none;
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
@@ -1404,7 +1406,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   }
   .filter-panel.open { display: flex; }
   .filter-panel-apply { display: flex; width: 100%; justify-content: center; margin-top: 4px; }
-  .filter-chips { display: flex; }
 }
 
 /* =======================================================
@@ -2599,6 +2600,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   border: 1px dashed rgba(25, 25, 25, 0.3);
   border-radius: 9px;
   background: var(--plaster);
+  color: var(--ink);
   cursor: pointer;
 }
 .field input[type="file"]::file-selector-button {
@@ -2673,6 +2675,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   font-family: var(--font-body);
   font-size: 0.95rem;
   background: var(--white);
+  color: var(--ink);
   resize: vertical;
 }
 .add-event-panel .field-row {
@@ -3365,6 +3368,23 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .kitchen-card:focus-visible {
   outline: 2px solid var(--saffron);
   outline-offset: 3px;
+}
+
+/* The feature column and the side column (2nd recipe + community
+   highlight) rarely have matching content length, which left dead
+   space below the shorter feature block on desktop. Stretch the
+   feature to the row's full height and pin its "View recipe" link to
+   the bottom instead, so any leftover height reads as intentional
+   breathing room rather than a stray gap before the next section. */
+@media (min-width: 901px) {
+  .kitchen-feature {
+    display: flex;
+    flex-direction: column;
+  }
+  .kitchen-feature .kitchen-card-flat-cta {
+    margin-top: auto;
+    padding-top: 14px;
+  }
 }
 
 /* =======================================================
