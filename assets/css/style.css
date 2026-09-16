@@ -369,7 +369,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .section { padding: 76px 0; }
 .events-head-actions { display: flex; align-items: center; gap: 12px; }
 .events-head-actions .btn { height: 42px; padding-top: 0; padding-bottom: 0; }
-.events-head-arrows { margin: 0; align-items: center; }
+.carousel-controls.events-head-arrows { margin: 0; align-items: center; }
 .section-head {
   display: flex;
   align-items: center;
@@ -747,6 +747,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   display: grid;
   grid-template-columns: 1.5fr 1fr;
   gap: 24px;
+  align-items: start;
 }
 
 .badge {
@@ -857,6 +858,19 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 @media (max-width: 900px) {
   .kitchen-grid { grid-template-columns: 1fr; }
+  /* Stacked in one column, the bordered white card's inset padding no
+     longer reads as "a card" next to the flush feature article above
+     it — it just looks like its title doesn't line up. Drop the box
+     and use a top divider instead, matching the feature's flush left
+     edge. The dark post card keeps its padding since its own
+     background already reads as an intentional, separate block. */
+  .kitchen-card:not(.dark) {
+    background: none;
+    border: none;
+    border-top: 1px solid rgba(25, 25, 25, 0.14);
+    padding: 20px 0 0;
+  }
+  .kitchen-card:not(.dark) .kitchen-card-photo { margin: 0 0 14px; }
 }
 
 /* Event cards with photo top */
@@ -1057,9 +1071,9 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 @media (max-width: 900px) {
   .hero-slide-inner { grid-template-columns: 1fr; padding: 50px 0 70px; }
-  .hero-arrow { width: 34px; height: 34px; top: auto; bottom: 20px; transform: none; }
-  .hero-arrow.prev { left: 16px; }
-  .hero-arrow.next { right: 16px; }
+  .hero-arrow { width: 38px; height: 38px; }
+  .hero-arrow.prev { left: 12px; }
+  .hero-arrow.next { right: 12px; }
   .hero-carousel { min-height: calc(100vh - 100px); }
   .hero-slide.hero-event-slide { align-items: flex-end; }
   .hero-event-inner { max-width: none; padding: 0 0 56px; }
@@ -1350,6 +1364,35 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .filter-clear a { color: var(--saffron); font-weight: 600; }
 
+.filter-chips {
+  display: none;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 12px;
+  background: var(--plaster-deep);
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.filter-chip:hover { background: var(--ink); color: var(--white); }
+.filter-chip-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
 @media (max-width: 700px) {
   .filter-bar { margin-top: 20px; padding: 18px; }
   .filter-toggle-btn { display: flex; }
@@ -1361,6 +1404,7 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   }
   .filter-panel.open { display: flex; }
   .filter-panel-apply { display: flex; width: 100%; justify-content: center; margin-top: 4px; }
+  .filter-chips { display: flex; }
 }
 
 /* =======================================================
@@ -1617,16 +1661,63 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .recipe-card-download {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: var(--white);
-  border: 1px solid rgba(25,25,25,0.12);
-  border-radius: 12px;
-  padding: 14px 18px;
+  gap: 16px;
+  background: var(--plaster-deep);
+  border: 1.5px solid rgba(25,25,25,0.14);
+  border-left: 4px solid var(--saffron);
+  border-radius: 0;
+  padding: 18px 20px;
   margin-top: 24px;
-  font-size: 0.88rem;
 }
-.recipe-card-download svg { width: 20px; height: 20px; color: var(--paprika); flex-shrink: 0; }
-.recipe-card-download a { font-weight: 600; color: var(--zellige); }
+.recipe-card-download-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 0;
+  flex-shrink: 0;
+  background: var(--white);
+  color: var(--saffron);
+  border: 1.5px solid rgba(25,25,25,0.14);
+  display: grid;
+  place-items: center;
+}
+.recipe-card-download-icon svg { width: 20px; height: 20px; }
+.recipe-card-download-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.recipe-card-download-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.recipe-card-download-body h4 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recipe-card-download-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.recipe-card-download-btn svg { width: 16px; height: 16px; }
+
+@media (max-width: 520px) {
+  .recipe-card-download { flex-wrap: wrap; }
+  .recipe-card-download-body { min-width: 140px; }
+  .recipe-card-download-btn { margin-left: 58px; }
+}
 
 @media (max-width: 900px) {
   .recipe-detail-hero { grid-template-columns: 1fr; }
@@ -1767,6 +1858,20 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   flex-wrap: wrap;
   padding-top: 14px;
   border-top: 1px solid var(--plaster-deep);
+}
+/* The like button is wrapped in a <form> so it can submit on click.
+   Flex items are always "blockified", which makes the form's inline
+   style ineffective; as a block box it doesn't pick up the row's
+   font size the way the plain <a> comment link beside it does,
+   giving it a taller line-height and throwing off vertical centering.
+   (display:contents would be the cleaner fix but isn't reliably
+   supported on <form> across browsers.) */
+.post-actions form {
+  display: inline-flex;
+  align-items: center;
+  font: inherit;
+  margin: 0;
+  line-height: 1;
 }
 .post-like-btn,
 .post-comment-link {
@@ -3506,13 +3611,15 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
    light surfaces (the recipe detail page and inside the event modal),
    so they need the dark-on-light treatment too. */
 #editRecipeToggle,
-#eventModalEditBtn {
+#eventModalEditBtn,
+.recipe-card-download-btn {
   background: var(--white);
   color: var(--zellige-deep);
   border: 1px solid rgba(25, 25, 25, 0.3);
 }
 #editRecipeToggle:hover,
-#eventModalEditBtn:hover {
+#eventModalEditBtn:hover,
+.recipe-card-download-btn:hover {
   background: var(--plaster);
   border-color: rgba(25, 25, 25, 0.5);
 }

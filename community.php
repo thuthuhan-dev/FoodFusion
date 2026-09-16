@@ -510,7 +510,7 @@ require_once 'includes/header.php';
             <?php endif; ?>
 
             <div class="post-actions">
-              <form method="POST" action="community.php" style="display:inline;" data-ajax-action="toggle_like">
+              <form method="POST" action="community.php" data-ajax-action="toggle_like">
                 <input type="hidden" name="action" value="toggle_like">
                 <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
                 <input type="hidden" name="tab" value="<?php echo htmlspecialchars($activeTab); ?>">

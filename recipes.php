@@ -558,6 +558,47 @@ require_once 'includes/header.php';
     </div>
   <?php endif; ?>
 
+  <?php
+    $activeFilterChips = [];
+    $chipQuery = $_GET;
+    if ($filterCuisine) {
+        foreach ($cuisines as $c) {
+            if ((int) $c['cuisine_id'] === $filterCuisine) {
+                $q = $chipQuery; unset($q['cuisine']);
+                $activeFilterChips[] = ['label' => $c['cuisine_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterCategory) {
+        foreach ($categories as $c) {
+            if ((int) $c['category_id'] === $filterCategory) {
+                $q = $chipQuery; unset($q['category']);
+                $activeFilterChips[] = ['label' => $c['category_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterDifficulty) {
+        foreach ($difficulties as $d) {
+            if ((int) $d['difficulty_id'] === $filterDifficulty) {
+                $q = $chipQuery; unset($q['difficulty']);
+                $activeFilterChips[] = ['label' => $d['difficulty_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterDietary) {
+        foreach ($dietaryOptions as $dt) {
+            if ((int) $dt['dietary_id'] === $filterDietary) {
+                $q = $chipQuery; unset($q['dietary']);
+                $activeFilterChips[] = ['label' => $dt['dietary_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+  ?>
+
   <form class="filter-bar" method="GET" action="recipes.php">
     <div class="filter-bar-top">
       <div class="filter-field filter-field-search">
@@ -571,6 +612,14 @@ require_once 'includes/header.php';
       </button>
       <button type="submit" class="btn btn-primary">Apply</button>
     </div>
+
+    <?php if ($activeFilterChips): ?>
+      <div class="filter-chips">
+        <?php foreach ($activeFilterChips as $chip): ?>
+          <a href="<?php echo htmlspecialchars($chip['href']); ?>" class="filter-chip"><?php echo htmlspecialchars($chip['label']); ?> <span class="filter-chip-x" aria-hidden="true">&times;</span></a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
 
     <div class="filter-panel" id="filterPanel">
       <div class="filter-field">

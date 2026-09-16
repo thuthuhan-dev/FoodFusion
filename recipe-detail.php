@@ -682,8 +682,17 @@ require_once 'includes/header.php';
         <?php if ($recipeCard): ?>
           <?php $cardDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $recipeCard['card_title']))) . '.pdf'; ?>
           <div class="recipe-card-download">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-            <span>Printable version available — <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>" download="<?php echo htmlspecialchars($cardDownloadName); ?>"><?php echo htmlspecialchars($recipeCard['card_title']); ?></a></span>
+            <span class="recipe-card-download-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            </span>
+            <div class="recipe-card-download-body">
+              <span class="recipe-card-download-label">Printable version</span>
+              <h4><?php echo htmlspecialchars($recipeCard['card_title']); ?></h4>
+            </div>
+            <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>" download="<?php echo htmlspecialchars($cardDownloadName); ?>" class="btn btn-outline recipe-card-download-btn" aria-label="Download printable recipe card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download
+            </a>
           </div>
         <?php endif; ?>
       </aside>
