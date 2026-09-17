@@ -480,7 +480,7 @@ require_once 'includes/header.php';
             <h3><?php echo htmlspecialchars($post['post_title']); ?></h3>
 
             <?php if ($post['post_type'] === 'Recipe' && !empty($post['recipe_name'])):
-              $thumb = !empty($post['recipe_image']) ? $post['recipe_image'] : placeholder_img('recipe-' . $post['recipe_id'], 200, 200);
+              $thumb = !empty($post['recipe_image']) ? $post['recipe_image'] : placeholder_img('recipe-' . $post['recipe_id'], 800, 450);
               $showRecipeContent = !in_array(trim((string) $post['post_content']), $genericRecipeText, true);
             ?>
               <div class="recipe-post-card" style="border:none; padding:0; box-shadow:none; margin-bottom:14px;">

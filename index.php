@@ -448,22 +448,61 @@ if ($statUpcomingEventCount < 1) { $statUpcomingEventCount = count($events); }
 require_once 'includes/header.php';
 ?>
 
-<?php $heroRecipes = $recentRecipes; ?>
+<?php
+  $heroSlidesContent = [
+    [
+      'eyebrow' => 'Cook. Share. Belong.',
+      'title' => 'Where Culinary Creativity Meets Community.',
+      'lede' => 'Discover a world of flavor rooted in Moroccan tradition, share your favourite home-cooked meals, and connect with food enthusiasts who believe every dish tells a story.',
+      'img' => 'assets/img/share.jpg',
+      'alt' => 'Moroccan tagine and spices',
+      'actions' => [
+        ['label' => 'Start Cooking', 'type' => 'modal'],
+        ['label' => 'Explore Recipes', 'href' => 'recipes.php'],
+      ],
+    ],
+    [
+      'eyebrow' => '2,300+ Members',
+      'title' => 'Join a Community That Shares Its Table.',
+      'lede' => 'Post your own recipes, swap kitchen tips, and follow along as members cook their way through the same dishes — no recipe too simple, no cook too new.',
+      'img' => 'assets/img/cm.jpg',
+      'alt' => 'Fresh herbs and ingredients for a shared meal',
+      'actions' => [
+        ['label' => "Join Us — it's free", 'type' => 'modal'],
+        ['label' => 'Visit the Cookbook', 'href' => 'community.php'],
+      ],
+    ],
+    [
+      'eyebrow' => 'Live & Online',
+      'title' => 'Learn Hands-On at a Cooking Event.',
+      'lede' => 'From sourdough masterclasses to spice market tours, book a seat at an upcoming FoodFusion event and cook alongside people who love food as much as you do.',
+      'img' => 'assets/img/k.jpg',
+      'alt' => 'Hands-on cooking class in progress',
+      'actions' => [
+        ['label' => 'See Upcoming Events', 'href' => '#events'],
+        ['label' => 'Explore Recipes', 'href' => 'recipes.php'],
+      ],
+    ],
+  ];
+?>
 <section class="hero-carousel">
 
-  <?php foreach ($heroRecipes as $hi => $hRecipe):
-    $hImg = !empty($hRecipe['image_url']) ? $hRecipe['image_url'] : placeholder_img('recipe-' . $hRecipe['recipe_id'], 1600, 900);
-  ?>
+  <?php foreach ($heroSlidesContent as $hi => $hSlide): ?>
   <div class="hero-slide hero-event-slide<?php echo $hi === 0 ? ' active' : ''; ?>">
-    <img class="hero-event-photo" src="<?php echo htmlspecialchars($hImg); ?>" alt="<?php echo htmlspecialchars($hRecipe['recipe_name']); ?>" loading="<?php echo $hi === 0 ? 'eager' : 'lazy'; ?>">
+    <img class="hero-event-photo" src="<?php echo htmlspecialchars($hSlide['img']); ?>" alt="<?php echo htmlspecialchars($hSlide['alt']); ?>" loading="<?php echo $hi === 0 ? 'eager' : 'lazy'; ?>">
     <div class="hero-event-scrim"></div>
     <div class="wrap hero-event-inner">
-      <span class="eyebrow">Featured recipe</span>
-      <h1><?php echo htmlspecialchars($hRecipe['recipe_name']); ?></h1>
-      <p class="lede"><?php echo htmlspecialchars($hRecipe['description']); ?></p>
+      <span class="eyebrow"><?php echo htmlspecialchars($hSlide['eyebrow']); ?></span>
+      <h1><?php echo htmlspecialchars($hSlide['title']); ?></h1>
+      <p class="lede"><?php echo htmlspecialchars($hSlide['lede']); ?></p>
       <div class="hero-actions">
-        <a href="recipe-detail.php?id=<?php echo (int) $hRecipe['recipe_id']; ?>" class="btn btn-primary">Read the recipe</a>
-        <a href="recipe-detail.php?id=<?php echo (int) $hRecipe['recipe_id']; ?>" class="btn btn-outline">Save for later</a>
+        <?php foreach ($hSlide['actions'] as $ai => $action): ?>
+          <?php if (($action['type'] ?? '') === 'modal'): ?>
+            <button type="button" class="btn <?php echo $ai === 0 ? 'btn-primary' : 'btn-outline'; ?>" data-open-modal="joinModal"><?php echo htmlspecialchars($action['label']); ?></button>
+          <?php else: ?>
+            <a href="<?php echo htmlspecialchars($action['href']); ?>" class="btn <?php echo $ai === 0 ? 'btn-primary' : 'btn-outline'; ?>"><?php echo htmlspecialchars($action['label']); ?></a>
+          <?php endif; ?>
+        <?php endforeach; ?>
       </div>
     </div>
   </div>
@@ -475,9 +514,9 @@ require_once 'includes/header.php';
   <button type="button" class="hero-arrow next" id="heroNext" aria-label="Next slide">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
   </button>
-  <span class="hero-slide-counter"><span id="heroSlideCounter">1</span>/<?php echo count($heroRecipes); ?> &middot; auto</span>
+  <span class="hero-slide-counter"><span id="heroSlideCounter">1</span>/<?php echo count($heroSlidesContent); ?> &middot; auto</span>
   <div class="hero-dots">
-    <?php foreach ($heroRecipes as $hi => $_): ?>
+    <?php foreach ($heroSlidesContent as $hi => $_): ?>
       <button type="button" class="hero-dot<?php echo $hi === 0 ? ' active' : ''; ?>" aria-label="Slide <?php echo $hi + 1; ?>"></button>
     <?php endforeach; ?>
   </div>
