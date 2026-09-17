@@ -718,7 +718,10 @@ require_once 'includes/header.php';
               <?php
                 $peopleInfo = $eventPeople[$event['event_id']] ?? [];
                 $goingCount = $peopleInfo['count'] ?? 0;
-                $organizerName = $peopleInfo['organizer'] ?? '';
+                // Events added before organizer tracking existed have no
+                // EVENT_PARTICIPANT row on file — fall back to a neutral
+                // label instead of leaving "Organized by" off entirely.
+                $organizerName = $peopleInfo['organizer'] ?? 'the FoodFusion team';
                 $isOrganizer = in_array((int) $event['event_id'], $myOrganizedEventIds, true);
                 $hasJoined = in_array((int) $event['event_id'], $myJoinedEventIds, true);
               ?>

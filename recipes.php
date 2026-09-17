@@ -688,8 +688,47 @@ require_once 'includes/header.php';
       <p>Try clearing a filter or searching for something else.</p>
     </div>
   <?php else: ?>
+    <?php
+      // On the first page, spotlight the newest recipe in the same big
+      // "feature next to smaller items" layout the homepage uses for
+      // "Fresh from the kitchen" — the rest of the page's results still
+      // follow in the regular grid below.
+      $featuredRecipes = ($page === 1 && count($recipes) >= 3) ? array_slice($recipes, 0, 3) : [];
+      $gridRecipes = $featuredRecipes ? array_slice($recipes, 3) : $recipes;
+    ?>
+    <?php if ($featuredRecipes): ?>
+      <?php
+        $rFeature = $featuredRecipes[0];
+        $rFeatureImg = !empty($rFeature['image_url']) ? $rFeature['image_url'] : placeholder_img('recipe-' . $rFeature['recipe_id'], 900, 700);
+      ?>
+      <span class="eyebrow">Freshly added</span>
+      <div class="kitchen-grid recipe-feature-grid">
+        <a href="recipe-detail.php?id=<?php echo (int) $rFeature['recipe_id']; ?>" class="kitchen-feature">
+          <div class="kitchen-feature-photo"><img src="<?php echo htmlspecialchars($rFeatureImg); ?>" alt="<?php echo htmlspecialchars($rFeature['recipe_name']); ?>" loading="lazy"></div>
+          <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($rFeature['difficulty_name']); ?> &middot; <?php echo (int) $rFeature['prep_time'] + (int) $rFeature['cook_time']; ?> min</span>
+          <h3><?php echo htmlspecialchars($rFeature['recipe_name']); ?></h3>
+          <p><?php echo htmlspecialchars($rFeature['description']); ?></p>
+          <span class="kitchen-card-flat-cta">View recipe &rarr;</span>
+        </a>
+
+        <div class="kitchen-side">
+          <?php for ($i = 1; $i <= 2; $i++):
+            $rSide = $featuredRecipes[$i];
+            $rSideImg = !empty($rSide['image_url']) ? $rSide['image_url'] : placeholder_img('recipe-' . $rSide['recipe_id'], 500, 360);
+          ?>
+            <a href="recipe-detail.php?id=<?php echo (int) $rSide['recipe_id']; ?>" class="kitchen-card">
+              <div class="kitchen-card-photo"><img src="<?php echo htmlspecialchars($rSideImg); ?>" alt="<?php echo htmlspecialchars($rSide['recipe_name']); ?>" loading="lazy"></div>
+              <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($rSide['difficulty_name']); ?> &middot; <?php echo (int) $rSide['prep_time'] + (int) $rSide['cook_time']; ?> min</span>
+              <h3><?php echo htmlspecialchars($rSide['recipe_name']); ?></h3>
+            </a>
+          <?php endfor; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($gridRecipes): ?>
     <div class="recipe-grid">
-      <?php foreach ($recipes as $recipe):
+      <?php foreach ($gridRecipes as $recipe):
         $img = !empty($recipe['image_url']) ? $recipe['image_url'] : placeholder_img('recipe-' . $recipe['recipe_id'], 500, 400);
       ?>
         <article class="recipe-grid-card">
@@ -698,20 +737,9 @@ require_once 'includes/header.php';
             <span class="badge"><?php echo htmlspecialchars($recipe['difficulty_name']); ?></span>
           </div>
           <div class="recipe-grid-body">
-            <div class="recipe-grid-meta">
-              <span><?php echo htmlspecialchars($recipe['cuisine_name']); ?></span>
-              <span><?php echo htmlspecialchars($recipe['category_name']); ?></span>
-              <span><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
-            </div>
+            <span class="recipe-grid-meta"><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
             <h3><?php echo htmlspecialchars($recipe['recipe_name']); ?></h3>
             <p><?php echo htmlspecialchars($recipe['description']); ?></p>
-            <?php if (!empty($recipe['dietary_tags'])): ?>
-              <div class="dietary-tags">
-                <?php foreach ($recipe['dietary_tags'] as $tag): ?>
-                  <span class="dietary-tag"><?php echo htmlspecialchars($tag); ?></span>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
             <a href="recipe-detail.php?id=<?php echo (int) $recipe['recipe_id']; ?>" class="btn btn-ghost">View recipe &rarr;</a>
 
             <?php
@@ -753,6 +781,7 @@ require_once 'includes/header.php';
         </article>
       <?php endforeach; ?>
     </div>
+    <?php endif; ?>
 
     <?php if ($totalPages > 1): ?>
       <nav class="pagination" aria-label="Recipe results pages">

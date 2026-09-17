@@ -468,10 +468,17 @@ document.addEventListener('DOMContentLoaded', function () {
         var loggedIn = btn.getAttribute('data-logged-in') === '1';
 
         var peopleEl = document.getElementById('eventModalPeople');
-        var peopleParts = [];
-        if (organizerName) peopleParts.push('Organized by ' + organizerName);
-        peopleParts.push(goingCount + (goingCount === 1 ? ' person going' : ' people going'));
-        peopleEl.textContent = peopleParts.join(' \u00b7 ');
+        peopleEl.textContent = '';
+        if (organizerName) {
+          var organizerEl = document.createElement('strong');
+          organizerEl.className = 'event-modal-organizer';
+          organizerEl.textContent = 'Organized by ' + organizerName;
+          peopleEl.appendChild(organizerEl);
+          peopleEl.appendChild(document.createTextNode(' \u00b7 '));
+        }
+        peopleEl.appendChild(document.createTextNode(
+          goingCount + (goingCount === 1 ? ' person going' : ' people going')
+        ));
 
         var joinForm = document.getElementById('eventJoinForm');
         var joinBtn = document.getElementById('eventJoinBtn');
