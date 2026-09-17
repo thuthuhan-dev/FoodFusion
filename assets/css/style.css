@@ -944,6 +944,11 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   min-height: calc(100vh - 112px);
   overflow: hidden;
   color: var(--white);
+  /* Slides cross-fade via opacity; without a dark base underneath, the
+     instant where both slides are partly transparent lets the page's
+     own light background show through as a "flash". A dark fallback
+     here keeps that instant dark instead. */
+  background: var(--zellige-deep);
 }
 .hero-slide-counter {
   position: absolute;
@@ -963,11 +968,20 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   inset: 0;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.6s ease;
+  /* visibility switches instantly on class toggle by default, which cut
+     the outgoing slide's fade short and let the page's own background
+     flash through underneath the incoming slide. Delaying the hidden
+     switch until the opacity fade finishes (and applying visible with
+     no delay) makes both slides actually cross-fade together. */
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
   display: flex;
   align-items: center;
 }
-.hero-slide.active { opacity: 1; visibility: visible; }
+.hero-slide.active {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.6s ease, visibility 0s linear 0s;
+}
 
 .hero-slide.grad-1 { background: radial-gradient(circle at 15% 20%, #4a1f18 0%, var(--zellige-deep) 55%), linear-gradient(135deg, var(--zellige-deep), #0a0a0a); }
 .hero-slide.grad-2 { background: radial-gradient(circle at 85% 25%, #6b2a20 0%, var(--zellige-deep) 55%), linear-gradient(135deg, var(--zellige-deep), #0a0a0a); }
@@ -1429,13 +1443,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 @media (max-width: 980px) { .recipe-grid { grid-template-columns: 1fr 1fr; gap: 28px; } }
 @media (max-width: 640px) { .recipe-grid { grid-template-columns: 1fr; } }
-
-/* The asymmetric "featured recipe next to two smaller ones" block that
-   opens the Recipe Collection page reuses the homepage's Fresh-from-
-   the-kitchen components (.kitchen-grid/.kitchen-feature/.kitchen-card)
-   as-is — just extra spacing so it reads as its own block above the
-   regular grid. */
-.recipe-feature-grid { margin: 8px 0 48px; }
 
 .recipe-grid-card {
   background: var(--white);

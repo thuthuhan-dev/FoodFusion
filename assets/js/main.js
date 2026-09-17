@@ -546,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (nextEl) nextEl.addEventListener('click', function () { advance(); restart(); });
 
     var timer = null;
-    function start() { timer = setInterval(advance, 4500); }
+    function start() { timer = setInterval(advance, 7000); }
     function stop() { if (timer) clearInterval(timer); }
     function restart() { stop(); start(); }
 
