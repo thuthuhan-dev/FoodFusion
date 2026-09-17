@@ -1,6 +1,14 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+// A session can end up with user_id set but the other login fields
+// missing — e.g. a stale/leftover session from before a code change, or
+// one that never went through login.php's normal (atomic) sign-in path.
+// Treat that as not logged in rather than rendering with missing fields.
+if (!empty($_SESSION['user_id']) && empty($_SESSION['first_name'])) {
+    unset($_SESSION['user_id'], $_SESSION['first_name'], $_SESSION['role'], $_SESSION['session_log_id']);
+}
+
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
