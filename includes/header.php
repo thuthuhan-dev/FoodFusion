@@ -1,6 +1,11 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+// Every page-rendering script requires this file first, before any output,
+// so it's the one place to set these for the whole site.
+header('X-Frame-Options: SAMEORIGIN');
+header('X-Content-Type-Options: nosniff');
+
 // A session can end up with user_id set but the other login fields
 // missing — e.g. a stale/leftover session from before a code change, or
 // one that never went through login.php's normal (atomic) sign-in path.
