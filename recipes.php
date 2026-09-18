@@ -40,7 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
             } else {
                 $pdo->prepare('INSERT INTO RECIPE_FAVORITE (user_id, recipe_id) VALUES (?, ?)')->execute([$_SESSION['user_id'], $postedId]);
             }
-            header('Location: ' . ($_POST['return_to'] ?? 'recipes.php'));
+            // Validate before redirecting — same pattern as community.php's
+            // delete_post — so return_to can't be used to send someone to an
+            // off-site URL crafted into the form.
+            $returnTo = trim($_POST['return_to'] ?? '');
+            if ($returnTo !== '' && str_starts_with($returnTo, 'recipes.php')) {
+                header('Location: ' . $returnTo);
+            } else {
+                header('Location: recipes.php');
+            }
             exit;
         } catch (PDOException $e) {
             $cardMessage = 'Something went wrong updating your favourites.';
