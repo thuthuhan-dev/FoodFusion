@@ -829,11 +829,6 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .kitchen-card.dark h3 { color: var(--white); font-size: 1.15rem; }
 .kitchen-card.dark p { color: rgba(255,253,248,0.78); }
-
-/* Trending This Week spotlight — the same dark quote card, used
-   standalone (outside the kitchen-grid's flex row) so it needs its own
-   width instead of relying on flex:1 from a parent. */
-.trending-spotlight { max-width: 560px; }
 .quote-mark {
   font-family: var(--font-display);
   font-size: 3.2rem;

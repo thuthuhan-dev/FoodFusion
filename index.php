@@ -70,50 +70,25 @@ if (!$spotlightPost) {
     $spotlightPost = ['post_id' => null, 'post_type' => 'Culinary Experience', 'post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
 }
 
-/* ---------- Trending this week: the post with the most likes + reposts
-   combined in the last 7 days. Falls back to the single most-liked post
-   overall when nothing has any engagement in that window. ---------- */
-$trendingPost = null;
+/* ---------- Featured recipes: manually curated via is_featured = 1
+   directly in the database — there is no in-app toggle for this. ---------- */
+$featuredRecipes = [];
 if ($pdo) {
     try {
         $stmt = $pdo->query(
-            "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name,
-                    (COALESCE(l.cnt, 0) + COALESCE(s.cnt, 0)) AS engagement
-             FROM COMMUNITY_POST p
-             JOIN USERS u ON p.user_id = u.user_id
-             LEFT JOIN (
-                 SELECT post_id, COUNT(*) AS cnt FROM POST_LIKE
-                 WHERE created_at >= (NOW() - INTERVAL 7 DAY)
-                 GROUP BY post_id
-             ) l ON l.post_id = p.post_id
-             LEFT JOIN (
-                 SELECT post_id, COUNT(*) AS cnt FROM POST_SHARE
-                 WHERE created_at >= (NOW() - INTERVAL 7 DAY)
-                 GROUP BY post_id
-             ) s ON s.post_id = p.post_id
-             WHERE (COALESCE(l.cnt, 0) + COALESCE(s.cnt, 0)) > 0
-             ORDER BY engagement DESC, p.created_at DESC
-             LIMIT 1"
+            "SELECT r.recipe_id, r.recipe_name, r.description, r.prep_time, r.cook_time, r.image_url,
+                    c.cuisine_name, cat.category_name, d.difficulty_name
+             FROM RECIPE r
+             JOIN CUISINE_TYPE c ON r.cuisine_id = c.cuisine_id
+             JOIN RECIPE_CATEGORY cat ON r.category_id = cat.category_id
+             JOIN DIFFICULTY d ON r.difficulty_id = d.difficulty_id
+             WHERE r.is_featured = 1
+             ORDER BY r.created_at DESC
+             LIMIT 3"
         );
-        $trendingPost = $stmt->fetch();
-
-        // Nothing liked or reposted in the last 7 days — fall back to the
-        // single most-liked post of all time rather than showing nothing.
-        if (!$trendingPost) {
-            $stmt = $pdo->query(
-                "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name,
-                        COUNT(l.like_id) AS engagement
-                 FROM COMMUNITY_POST p
-                 JOIN USERS u ON p.user_id = u.user_id
-                 LEFT JOIN POST_LIKE l ON l.post_id = p.post_id
-                 GROUP BY p.post_id, p.post_type, p.post_title, p.post_content, u.first_name
-                 ORDER BY engagement DESC, p.created_at DESC
-                 LIMIT 1"
-            );
-            $trendingPost = $stmt->fetch() ?: null;
-        }
+        $featuredRecipes = $stmt->fetchAll();
     } catch (PDOException $e) {
-        $trendingPost = null;
+        $featuredRecipes = [];
     }
 }
 
@@ -715,31 +690,34 @@ require_once 'includes/header.php';
   </div>
 </section>
 
-<?php if ($trendingPost): ?>
+<?php if ($featuredRecipes): ?>
 <section class="section">
   <div class="wrap">
     <div class="section-head">
       <div>
-        <span class="eyebrow">Trending this week</span>
-        <h2>What the community can't stop talking about</h2>
+        <span class="eyebrow">Featured</span>
+        <h2>Recipes we think you'll love</h2>
       </div>
     </div>
 
-    <?php
-      $trendTab = ['Recipe' => 'recipe', 'Cooking Tip' => 'tip', 'Culinary Experience' => 'experience'][$trendingPost['post_type'] ?? ''] ?? 'experience';
-      $trendHref = !empty($trendingPost['post_id'])
-          ? 'post-detail.php?id=' . (int) $trendingPost['post_id']
-          : 'community.php?tab=' . $trendTab;
-    ?>
-    <a href="<?php echo htmlspecialchars($trendHref); ?>" class="kitchen-card dark trending-spotlight">
-      <span class="quote-mark">"</span>
-      <h3><?php echo htmlspecialchars($trendingPost['post_title']); ?></h3>
-      <p><?php echo htmlspecialchars($trendingPost['post_content']); ?></p>
-      <div class="author-row">
-        <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($trendingPost['first_name'], 0, 2))); ?></span>
-        <span class="author-name"><?php echo htmlspecialchars($trendingPost['first_name']); ?></span>
-      </div>
-    </a>
+    <div class="recipe-grid">
+      <?php foreach ($featuredRecipes as $recipe):
+        $img = !empty($recipe['image_url']) ? $recipe['image_url'] : placeholder_img('recipe-' . $recipe['recipe_id'], 500, 400);
+      ?>
+        <article class="recipe-grid-card">
+          <div class="recipe-grid-photo">
+            <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($recipe['recipe_name']); ?>" loading="lazy">
+            <span class="badge"><?php echo htmlspecialchars($recipe['difficulty_name']); ?></span>
+          </div>
+          <div class="recipe-grid-body">
+            <span class="recipe-grid-meta"><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
+            <h3><?php echo htmlspecialchars($recipe['recipe_name']); ?></h3>
+            <p><?php echo htmlspecialchars($recipe['description']); ?></p>
+            <a href="recipe-detail.php?id=<?php echo (int) $recipe['recipe_id']; ?>" class="btn btn-ghost">View recipe &rarr;</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
   </div>
 </section>
 <?php endif; ?>
