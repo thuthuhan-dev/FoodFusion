@@ -122,11 +122,14 @@ $popularRecipes = [];
 if ($pdo) {
     try {
         $stmt = $pdo->query(
-            "SELECT r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name
+            "SELECT r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name,
+                    COUNT(f.favorite_id) AS favorite_count
              FROM RECIPE r
              JOIN CUISINE_TYPE c ON r.cuisine_id = c.cuisine_id
              JOIN DIFFICULTY d ON r.difficulty_id = d.difficulty_id
-             ORDER BY r.created_at DESC
+             LEFT JOIN RECIPE_FAVORITE f ON f.recipe_id = r.recipe_id
+             GROUP BY r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name, r.created_at
+             ORDER BY favorite_count DESC, r.created_at DESC
              LIMIT 8"
         );
         $popularRecipes = $stmt->fetchAll();
@@ -672,8 +675,8 @@ require_once 'includes/header.php';
   <div class="wrap">
     <div class="section-head">
       <div>
-        <span class="eyebrow">Popular this month</span>
-        <h2>Recipes members keep coming back to</h2>
+        <span class="eyebrow">Community Favorites</span>
+        <h2>Recipes members save again and again</h2>
       </div>
     </div>
 
