@@ -25,5 +25,5 @@ includes/db.php
 
 # User-uploaded files
 assets/uploads/*
-!assets/uploads/htaccess
+!assets/uploads/.htaccess
 !assets/uploads/index.html
