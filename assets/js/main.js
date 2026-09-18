@@ -79,6 +79,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) closeAllModals();
   });
 
+  /* Infographic lightbox (Educational Resources) — click a card's photo
+     to see it enlarged, reusing the same modal open/close machinery as
+     the auth and event modals above. */
+  document.querySelectorAll('.infographic-trigger').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var card = btn.closest('.infographic-card');
+      var img = btn.querySelector('img');
+      var title = card ? card.querySelector('.infographic-card-body h3') : null;
+      var desc = card ? card.querySelector('.infographic-card-body p') : null;
+
+      var modalImg = document.getElementById('infographicModalImage');
+      var modalTitle = document.getElementById('infographicModalTitle');
+      var modalDesc = document.getElementById('infographicModalDescription');
+
+      if (modalImg && img) { modalImg.src = img.src; modalImg.alt = img.alt; }
+      if (modalTitle) modalTitle.textContent = title ? title.textContent : '';
+      if (modalDesc) modalDesc.textContent = desc ? desc.textContent : '';
+
+      openModalById('infographicModal');
+    });
+  });
+
   /* Repeatable "add another step" rows — used by the Community Cookbook
      composers (Cooking Tip / Culinary Experience) and the Edit Post form.
      Not delegated: the buttons this targets are all present at page load

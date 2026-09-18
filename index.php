@@ -70,6 +70,53 @@ if (!$spotlightPost) {
     $spotlightPost = ['post_id' => null, 'post_type' => 'Culinary Experience', 'post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
 }
 
+/* ---------- Trending this week: the post with the most likes + reposts
+   combined in the last 7 days. Falls back to the single most-liked post
+   overall when nothing has any engagement in that window. ---------- */
+$trendingPost = null;
+if ($pdo) {
+    try {
+        $stmt = $pdo->query(
+            "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name,
+                    (COALESCE(l.cnt, 0) + COALESCE(s.cnt, 0)) AS engagement
+             FROM COMMUNITY_POST p
+             JOIN USERS u ON p.user_id = u.user_id
+             LEFT JOIN (
+                 SELECT post_id, COUNT(*) AS cnt FROM POST_LIKE
+                 WHERE created_at >= (NOW() - INTERVAL 7 DAY)
+                 GROUP BY post_id
+             ) l ON l.post_id = p.post_id
+             LEFT JOIN (
+                 SELECT post_id, COUNT(*) AS cnt FROM POST_SHARE
+                 WHERE created_at >= (NOW() - INTERVAL 7 DAY)
+                 GROUP BY post_id
+             ) s ON s.post_id = p.post_id
+             WHERE (COALESCE(l.cnt, 0) + COALESCE(s.cnt, 0)) > 0
+             ORDER BY engagement DESC, p.created_at DESC
+             LIMIT 1"
+        );
+        $trendingPost = $stmt->fetch();
+
+        // Nothing liked or reposted in the last 7 days — fall back to the
+        // single most-liked post of all time rather than showing nothing.
+        if (!$trendingPost) {
+            $stmt = $pdo->query(
+                "SELECT p.post_id, p.post_type, p.post_title, p.post_content, u.first_name,
+                        COUNT(l.like_id) AS engagement
+                 FROM COMMUNITY_POST p
+                 JOIN USERS u ON p.user_id = u.user_id
+                 LEFT JOIN POST_LIKE l ON l.post_id = p.post_id
+                 GROUP BY p.post_id, p.post_type, p.post_title, p.post_content, u.first_name
+                 ORDER BY engagement DESC, p.created_at DESC
+                 LIMIT 1"
+            );
+            $trendingPost = $stmt->fetch() ?: null;
+        }
+    } catch (PDOException $e) {
+        $trendingPost = null;
+    }
+}
+
 /* ---------- Popular recipes carousel ---------- */
 $popularRecipes = [];
 if ($pdo) {
@@ -664,6 +711,35 @@ require_once 'includes/header.php';
     </div>
   </div>
 </section>
+
+<?php if ($trendingPost): ?>
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Trending this week</span>
+        <h2>What the community can't stop talking about</h2>
+      </div>
+    </div>
+
+    <?php
+      $trendTab = ['Recipe' => 'recipe', 'Cooking Tip' => 'tip', 'Culinary Experience' => 'experience'][$trendingPost['post_type'] ?? ''] ?? 'experience';
+      $trendHref = !empty($trendingPost['post_id'])
+          ? 'post-detail.php?id=' . (int) $trendingPost['post_id']
+          : 'community.php?tab=' . $trendTab;
+    ?>
+    <a href="<?php echo htmlspecialchars($trendHref); ?>" class="kitchen-card dark trending-spotlight">
+      <span class="quote-mark">"</span>
+      <h3><?php echo htmlspecialchars($trendingPost['post_title']); ?></h3>
+      <p><?php echo htmlspecialchars($trendingPost['post_content']); ?></p>
+      <div class="author-row">
+        <span class="author-avatar"><?php echo htmlspecialchars(strtoupper(substr($trendingPost['first_name'], 0, 2))); ?></span>
+        <span class="author-name"><?php echo htmlspecialchars($trendingPost['first_name']); ?></span>
+      </div>
+    </a>
+  </div>
+</section>
+<?php endif; ?>
 
 <section class="section section-dark" id="events">
   <div class="wrap">

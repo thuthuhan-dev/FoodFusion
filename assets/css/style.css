@@ -829,6 +829,11 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .kitchen-card.dark h3 { color: var(--white); font-size: 1.15rem; }
 .kitchen-card.dark p { color: rgba(255,253,248,0.78); }
+
+/* Trending This Week spotlight — the same dark quote card, used
+   standalone (outside the kitchen-grid's flex row) so it needs its own
+   width instead of relying on flex:1 from a parent. */
+.trending-spotlight { max-width: 560px; }
 .quote-mark {
   font-family: var(--font-display);
   font-size: 3.2rem;
@@ -2440,6 +2445,67 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .infographic-card-body { padding: 18px 20px 22px; }
 .infographic-card-body h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 7px; }
 .infographic-card-body p { font-size: 0.87rem; color: var(--ink-soft); margin: 0; }
+
+/* Click-to-enlarge trigger wrapping the photo */
+.infographic-trigger {
+  all: unset;
+  display: block;
+  width: 100%;
+  position: relative;
+  cursor: zoom-in;
+}
+.infographic-zoom-badge {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(20, 20, 18, 0.72);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.infographic-zoom-badge svg { width: 16px; height: 16px; }
+.infographic-card:hover .infographic-zoom-badge { opacity: 1; transform: scale(1); }
+
+/* Infographic lightbox modal — much wider than the auth modals, with
+   the full (uncropped) image on top and its caption below. */
+.lightbox-modal {
+  max-width: 900px;
+  width: 92vw;
+  border-top: none;
+  background: var(--ink);
+}
+.lightbox-modal .modal-close {
+  background: rgba(20, 20, 18, 0.6);
+  color: var(--white);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  top: 12px;
+  right: 12px;
+}
+.lightbox-modal .modal-close:hover { background: rgba(20, 20, 18, 0.85); color: var(--white); }
+.lightbox-image {
+  display: block;
+  width: 100%;
+  max-height: 72vh;
+  object-fit: contain;
+  background: var(--ink);
+}
+.lightbox-caption { padding: 20px 26px 26px; background: var(--white); }
+.lightbox-caption h2 { font-size: 1.2rem; margin: 0 0 6px; }
+.lightbox-caption p { font-size: 0.92rem; color: var(--ink-soft); margin: 0; }
+@media (max-width: 620px) {
+  .lightbox-image { max-height: 50vh; }
+  .lightbox-caption { padding: 16px 18px 20px; }
+}
 
 /* =======================================================
    Community Cookbook — three-way tabs

@@ -371,7 +371,12 @@ require_once 'includes/header.php';
           $img = !empty($info['image_url']) ? $info['image_url'] : placeholder_img('infographic-' . $info['infographic_id'], 500, 400);
         ?>
           <div class="infographic-card">
-            <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($info['title']); ?>" loading="lazy">
+            <button type="button" class="infographic-trigger" aria-label="Enlarge <?php echo htmlspecialchars($info['title']); ?>">
+              <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($info['title']); ?>" loading="lazy">
+              <span class="infographic-zoom-badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/><path d="M11 8v6M8 11h6"/></svg>
+              </span>
+            </button>
             <div class="infographic-card-body">
               <h3><?php echo htmlspecialchars($info['title']); ?></h3>
               <p><?php echo htmlspecialchars($info['description']); ?></p>
@@ -384,5 +389,18 @@ require_once 'includes/header.php';
 </div>
 
 <div style="height: 40px;"></div>
+
+<div class="modal-overlay" id="infographicModal" role="dialog" aria-modal="true" aria-labelledby="infographicModalTitle">
+  <div class="modal lightbox-modal">
+    <button type="button" class="modal-close" data-close-modal aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <img id="infographicModalImage" class="lightbox-image" src="" alt="">
+    <div class="lightbox-caption">
+      <h2 id="infographicModalTitle"></h2>
+      <p id="infographicModalDescription"></p>
+    </div>
+  </div>
+</div>
 
 <?php require_once 'includes/footer.php'; ?>
