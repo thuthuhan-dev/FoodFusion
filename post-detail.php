@@ -136,6 +136,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                     $editFormError = 'Give your post a title under 150 characters.';
                 } elseif ($newContent === '') {
                     $editFormError = 'Your post needs some content.';
+                } elseif (mb_strlen($newContent) > 5000) {
+                    $editFormError = 'Your post content is too long — keep it under 5000 characters.';
+                } elseif (array_filter($newSteps, fn($s) => mb_strlen($s) > 500)) {
+                    $editFormError = 'Each step must be under 500 characters.';
                 } else {
                     $pdo->beginTransaction();
 
@@ -352,7 +356,7 @@ require_once 'includes/header.php';
             </div>
             <div class="field">
               <label for="edit_post_content"><?php echo $post['post_type'] === 'Culinary Experience' ? 'Tell the story' : 'Your tip'; ?></label>
-              <textarea id="edit_post_content" name="post_content" required><?php echo htmlspecialchars($post['post_content']); ?></textarea>
+              <textarea id="edit_post_content" name="post_content" required maxlength="5000"><?php echo htmlspecialchars($post['post_content']); ?></textarea>
             </div>
             <div class="field">
               <label for="edit_post_image">Photo</label>
@@ -362,10 +366,10 @@ require_once 'includes/header.php';
             <div class="field" id="editPostSteps">
               <label><?php echo $post['post_type'] === 'Culinary Experience' ? 'Moments' : 'Steps'; ?> (optional)</label>
               <?php if (empty($steps)): ?>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Step 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Step 1"></div>
               <?php else: ?>
                 <?php foreach ($steps as $s): ?>
-                  <div class="step-input-row"><input type="text" name="step[]" value="<?php echo htmlspecialchars($s); ?>"></div>
+                  <div class="step-input-row"><input type="text" name="step[]" maxlength="500" value="<?php echo htmlspecialchars($s); ?>"></div>
                 <?php endforeach; ?>
               <?php endif; ?>
             </div>

@@ -115,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var input = document.createElement('input');
       input.type = 'text';
       input.name = 'step[]';
+      input.maxLength = 500;
       input.placeholder = 'Next step';
       row.appendChild(input);
       container.appendChild(row);

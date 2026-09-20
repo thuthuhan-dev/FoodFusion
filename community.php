@@ -54,6 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             $formError = 'Give your post a title under 150 characters.';
         } elseif ($content === '') {
             $formError = 'Your post needs some content before you can share it.';
+        } elseif (mb_strlen($content) > 5000) {
+            $formError = 'Your post content is too long — keep it under 5000 characters.';
+        } elseif (array_filter($steps, fn($s) => mb_strlen($s) > 500)) {
+            $formError = 'Each step must be under 500 characters.';
         } elseif ($pdo) {
             try {
                 $pdo->beginTransaction();
@@ -363,7 +367,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field">
                 <label for="tip_content">Your tip</label>
-                <textarea id="tip_content" name="post_content" required placeholder="Describe the tip…"></textarea>
+                <textarea id="tip_content" name="post_content" required maxlength="5000" placeholder="Describe the tip…"></textarea>
               </div>
               <div class="field">
                 <label for="tip_image">Photo (optional)</label>
@@ -372,7 +376,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field" id="tipSteps">
                 <label>Steps (optional)</label>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Step 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Step 1"></div>
               </div>
               <button type="button" class="btn btn-ghost" data-add-step="tipSteps" style="margin-bottom:16px; width:100%;">+ Add another step</button>
               <button type="submit" class="btn btn-primary" style="width:100%;">Post Tip</button>
@@ -401,7 +405,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field">
                 <label for="exp_content">Tell the story</label>
-                <textarea id="exp_content" name="post_content" required placeholder="What happened, what you learned…"></textarea>
+                <textarea id="exp_content" name="post_content" required maxlength="5000" placeholder="What happened, what you learned…"></textarea>
               </div>
               <div class="field">
                 <label for="exp_image">Photo (optional)</label>
@@ -410,7 +414,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field" id="expSteps">
                 <label>Moments (optional)</label>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Moment 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Moment 1"></div>
               </div>
               <button type="button" class="btn btn-ghost" data-add-step="expSteps" style="margin-bottom:16px; width:100%;">+ Add another moment</button>
               <button type="submit" class="btn btn-primary" style="width:100%;">Post Experience</button>
