@@ -189,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $editErrors['card'] = 'Log in to manage your recipe cards.';
     } elseif ($pdo && $targetId > 0) {
         try {
-            $ownerStmt = $pdo->prepare('SELECT user_id, file_url FROM RECIPE_CARD WHERE card_id = ?');
+            $ownerStmt = $pdo->prepare('SELECT user_id, file_url FROM RECIPE_CARD WHERE recipe_card_id = ?');
             $ownerStmt->execute([$targetId]);
             $existingCard = $ownerStmt->fetch();
 
@@ -213,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                     $finalFile = $newFile !== null ? $newFile : $existingCard['file_url'];
                     $pdo->prepare(
                         'UPDATE RECIPE_CARD SET recipe_id = ?, card_title = ?, file_url = ?, updated_at = NOW()
-                         WHERE card_id = ? AND user_id = ?'
+                         WHERE recipe_card_id = ? AND user_id = ?'
                     )->execute([$newRecipeId, $newCardTitle, $finalFile, $targetId, $_SESSION['user_id']]);
 
                     // Old file is only deleted after the update succeeds, and only
@@ -418,7 +418,7 @@ $recipeCards = [];
 if ($pdo) {
     try {
         $recipeCards = $pdo->query(
-            "SELECT rc.card_id, rc.user_id, rc.card_title, rc.file_url, rc.uploaded_at, r.recipe_name, r.image_url, r.recipe_id
+            "SELECT rc.recipe_card_id AS card_id, rc.user_id, rc.card_title, rc.file_url, rc.uploaded_at, r.recipe_name, r.image_url, r.recipe_id
              FROM RECIPE_CARD rc
              JOIN RECIPE r ON rc.recipe_id = r.recipe_id
              ORDER BY rc.uploaded_at DESC"

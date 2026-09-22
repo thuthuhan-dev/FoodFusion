@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $eduEditErrors['document'] = 'Log in to manage your documents.';
     } elseif ($pdo && $targetId > 0) {
         try {
-            $ownerStmt = $pdo->prepare('SELECT user_id, file_url FROM EDUCATIONAL_DOCUMENT WHERE document_id = ?');
+            $ownerStmt = $pdo->prepare('SELECT user_id, file_url FROM EDUCATIONAL_DOCUMENT WHERE edu_document_id = ?');
             $ownerStmt->execute([$targetId]);
             $existingDoc = $ownerStmt->fetch();
 
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                     $finalFile = $newFile !== null ? $newFile : $existingDoc['file_url'];
                     $pdo->prepare(
                         'UPDATE EDUCATIONAL_DOCUMENT SET title = ?, description = ?, file_url = ?, updated_at = NOW()
-                         WHERE document_id = ? AND user_id = ?'
+                         WHERE edu_document_id = ? AND user_id = ?'
                     )->execute([$newTitle, $newDesc !== '' ? $newDesc : null, $finalFile, $targetId, $_SESSION['user_id']]);
 
                     if ($newFile !== null && !empty($existingDoc['file_url'])) {
@@ -183,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $eduEditErrors['video'] = 'Log in to manage your videos.';
     } elseif ($pdo && $targetId > 0) {
         try {
-            $ownerStmt = $pdo->prepare('SELECT user_id FROM EDUCATIONAL_VIDEO WHERE video_id = ?');
+            $ownerStmt = $pdo->prepare('SELECT user_id FROM EDUCATIONAL_VIDEO WHERE edu_video_id = ?');
             $ownerStmt->execute([$targetId]);
             $existingVideo = $ownerStmt->fetch();
 
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                 } else {
                     $pdo->prepare(
                         'UPDATE EDUCATIONAL_VIDEO SET title = ?, description = ?, video_url = ?, updated_at = NOW()
-                         WHERE video_id = ? AND user_id = ?'
+                         WHERE edu_video_id = ? AND user_id = ?'
                     )->execute([$newTitle, $newDesc !== '' ? $newDesc : null, $newVideoUrl, $targetId, $_SESSION['user_id']]);
 
                     header('Location: education.php?video_updated=1#videos');
@@ -269,7 +269,7 @@ $documents = [];
 if ($pdo) {
     try {
         $documents = $pdo->query(
-            "SELECT d.document_id, d.user_id, d.title, d.description, d.file_url, u.first_name, u.last_name
+            "SELECT d.edu_document_id AS document_id, d.user_id, d.title, d.description, d.file_url, u.first_name, u.last_name
              FROM EDUCATIONAL_DOCUMENT d
              JOIN USERS u ON d.user_id = u.user_id
              ORDER BY d.uploaded_at DESC"
@@ -284,7 +284,7 @@ $eduVideos = [];
 if ($pdo) {
     try {
         $eduVideos = $pdo->query(
-            "SELECT v.video_id, v.user_id, v.title, v.description, v.video_url, u.first_name, u.last_name
+            "SELECT v.edu_video_id AS video_id, v.user_id, v.title, v.description, v.video_url, u.first_name, u.last_name
              FROM EDUCATIONAL_VIDEO v
              JOIN USERS u ON v.user_id = u.user_id
              ORDER BY v.uploaded_at DESC"
