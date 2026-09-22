@@ -125,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         // cleanly with everything else if anything later fails.
         $ingIds     = $_POST['ingredient_id'] ?? [];
         $ingNewName = $_POST['new_ingredient_name'] ?? [];
+        $ingNewDesc = $_POST['new_ingredient_description'] ?? [];
         $ingQty     = $_POST['quantity'] ?? [];
         $ingUnit    = $_POST['unit_id'] ?? [];
         $ingredientRows = [];
@@ -136,7 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             if ($rawId === '__new__') {
                 $newName = trim($ingNewName[$i] ?? '');
                 if ($newName === '' || mb_strlen($newName) > 150) continue;
-                $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'quantity' => $qty, 'unit_id' => $uId];
+                $newDesc = trim($ingNewDesc[$i] ?? '');
+                if (mb_strlen($newDesc) > 300) $newDesc = mb_substr($newDesc, 0, 300);
+                $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'description' => $newDesc, 'quantity' => $qty, 'unit_id' => $uId];
             } else {
                 $id = (int) $rawId;
                 if ($id <= 0) continue;
@@ -185,19 +188,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                      VALUES (?, ?, ?, ?)'
                 );
                 $findIngStmt = $pdo->prepare('SELECT ingredient_id FROM INGREDIENT WHERE LOWER(ingredient_name) = LOWER(?)');
-                $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name) VALUES (?)');
+                $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name, description) VALUES (?, ?)');
 
                 $seenIngredients = [];
                 foreach ($ingredientRows as $row) {
                     if ($row['type'] === 'new') {
                         // Re-use an existing ingredient with the same name (case-insensitive)
                         // rather than creating a near-duplicate like "Onion" and "onion".
+                        // The typed description only ever applies to a genuinely new
+                        // ingredient row — it's discarded here, never used to edit one
+                        // that already exists.
                         $findIngStmt->execute([$row['name']]);
                         $existingId = $findIngStmt->fetchColumn();
                         if ($existingId) {
                             $resolvedId = (int) $existingId;
                         } else {
-                            $newIngStmt->execute([$row['name']]);
+                            $newIngStmt->execute([$row['name'], $row['description'] !== '' ? $row['description'] : null]);
                             $resolvedId = (int) $pdo->lastInsertId();
                         }
                     } else {
@@ -535,6 +541,7 @@ require_once 'includes/header.php';
                 <option value="__new__">+ Add a new ingredient…</option>
               </select>
               <input type="text" name="new_ingredient_name[]" class="ingredient-new-name" placeholder="Ingredient name" maxlength="150" style="display:none;">
+              <input type="text" name="new_ingredient_description[]" class="ingredient-new-description" placeholder="Short description (optional)" maxlength="300" style="display:none;">
             </div>
             <input type="number" name="quantity[]" step="0.01" min="0" placeholder="Qty">
             <select name="unit_id[]">

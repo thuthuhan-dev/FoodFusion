@@ -307,16 +307,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var pick = e.target.closest('.ingredient-pick');
     if (!pick) return;
     var nameInput = pick.querySelector('.ingredient-new-name');
+    var descInput = pick.querySelector('.ingredient-new-description');
     if (!nameInput) return;
 
     if (e.target.value === '__new__') {
       e.target.style.display = 'none';
       nameInput.style.display = '';
+      if (descInput) descInput.style.display = '';
       nameInput.focus();
     } else {
       e.target.style.display = '';
       nameInput.style.display = 'none';
       nameInput.value = '';
+      if (descInput) { descInput.style.display = 'none'; descInput.value = ''; }
     }
   });
 
@@ -329,6 +332,8 @@ document.addEventListener('DOMContentLoaded', function () {
       clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
       var clonedNameInput = clone.querySelector('.ingredient-new-name');
       if (clonedNameInput) clonedNameInput.style.display = 'none';
+      var clonedDescInput = clone.querySelector('.ingredient-new-description');
+      if (clonedDescInput) clonedDescInput.style.display = 'none';
       ingredientRows.appendChild(clone);
       var sel = clone.querySelector('select');
       if (sel) sel.focus();
@@ -370,6 +375,8 @@ document.addEventListener('DOMContentLoaded', function () {
       row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; s.style.display = ''; });
       var nameField = row.querySelector('.ingredient-new-name');
       if (nameField) nameField.style.display = 'none';
+      var descField = row.querySelector('.ingredient-new-description');
+      if (descField) descField.style.display = 'none';
     }
     renumberSteps();
   });
