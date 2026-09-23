@@ -2853,10 +2853,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   object-fit: cover;
   display: block;
 }
-.video-card-thumb .play-btn,
-.video-card-thumb .duration-badge { position: relative; z-index: 2; }
 .video-card-thumb .play-btn {
+  position: relative;
+  z-index: 2;
   box-shadow: 0 4px 14px -4px rgba(0,0,0,0.5);
+}
+/* duration-badge keeps the position:absolute set above — it must stay out
+   of the thumb's grid flow, or it becomes a second grid item and pushes
+   the (grid-centered) play button off-center, as only tutorials showed
+   (the only video-card type with a duration badge to trigger it). */
+.video-card-thumb .duration-badge {
+  z-index: 2;
 }
 .video-card-thumb::after {
   content: "";
