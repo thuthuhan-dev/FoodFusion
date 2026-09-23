@@ -136,6 +136,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                     $editFormError = 'Give your post a title under 150 characters.';
                 } elseif ($newContent === '') {
                     $editFormError = 'Your post needs some content.';
+                } elseif (mb_strlen($newContent) > 5000) {
+                    $editFormError = 'Your post content is too long — keep it under 5000 characters.';
+                } elseif (array_filter($newSteps, fn($s) => mb_strlen($s) > 500)) {
+                    $editFormError = 'Each step must be under 500 characters.';
                 } else {
                     $pdo->beginTransaction();
 
@@ -301,13 +305,13 @@ require_once 'includes/header.php';
       <?php endif; ?>
 
       <div class="post-actions">
-        <form method="POST" action="community.php" style="display:inline;" data-ajax-action="toggle_like">
+        <form method="POST" action="community.php" data-ajax-action="toggle_like">
           <input type="hidden" name="action" value="toggle_like">
           <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
           <input type="hidden" name="tab" value="<?php echo htmlspecialchars($backTab); ?>">
           <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
           <button type="submit" class="post-like-btn <?php echo $isLiked ? 'active' : ''; ?>" <?php echo empty($_SESSION['user_id']) ? 'disabled title="Log in to like"' : ''; ?>>
-            <svg viewBox="0 0 24 24" fill="<?php echo $isLiked ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 4 2.2C10.5 6.2 12 5 14 5c3.5 0 5.5 3.5 3.5 7.5C15 16.5 12 21 12 21z"/></svg>
+            <svg viewBox="0 0 24 24" fill="<?php echo $isLiked ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
             <span class="action-count"><?php echo $likeCount; ?></span>
           </button>
         </form>
@@ -352,7 +356,7 @@ require_once 'includes/header.php';
             </div>
             <div class="field">
               <label for="edit_post_content"><?php echo $post['post_type'] === 'Culinary Experience' ? 'Tell the story' : 'Your tip'; ?></label>
-              <textarea id="edit_post_content" name="post_content" required><?php echo htmlspecialchars($post['post_content']); ?></textarea>
+              <textarea id="edit_post_content" name="post_content" required maxlength="5000"><?php echo htmlspecialchars($post['post_content']); ?></textarea>
             </div>
             <div class="field">
               <label for="edit_post_image">Photo</label>
@@ -362,10 +366,10 @@ require_once 'includes/header.php';
             <div class="field" id="editPostSteps">
               <label><?php echo $post['post_type'] === 'Culinary Experience' ? 'Moments' : 'Steps'; ?> (optional)</label>
               <?php if (empty($steps)): ?>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Step 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Step 1"></div>
               <?php else: ?>
                 <?php foreach ($steps as $s): ?>
-                  <div class="step-input-row"><input type="text" name="step[]" value="<?php echo htmlspecialchars($s); ?>"></div>
+                  <div class="step-input-row"><input type="text" name="step[]" maxlength="500" value="<?php echo htmlspecialchars($s); ?>"></div>
                 <?php endforeach; ?>
               <?php endif; ?>
             </div>

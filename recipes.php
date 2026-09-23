@@ -12,9 +12,10 @@ $filterCategory = isset($_GET['category']) && $_GET['category'] !== '' ? (int) $
 $filterDifficulty = isset($_GET['difficulty']) && $_GET['difficulty'] !== '' ? (int) $_GET['difficulty'] : null;
 $filterDietary  = isset($_GET['dietary']) && $_GET['dietary'] !== '' ? (int) $_GET['dietary'] : null;
 $searchTerm     = isset($_GET['q']) ? trim($_GET['q']) : '';
+$activeFilterCount = (int) ($filterCuisine !== null) + (int) ($filterCategory !== null) + (int) ($filterDifficulty !== null) + (int) ($filterDietary !== null);
 
 $page = isset($_GET['page']) && (int) $_GET['page'] > 0 ? (int) $_GET['page'] : 1;
-$perPage = 6;
+$perPage = 9;
 $cardMessage = null;
 if (isset($_GET['recipe_deleted'])) {
     $cardMessage = 'Recipe deleted.';
@@ -39,7 +40,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggl
             } else {
                 $pdo->prepare('INSERT INTO RECIPE_FAVORITE (user_id, recipe_id) VALUES (?, ?)')->execute([$_SESSION['user_id'], $postedId]);
             }
-            header('Location: ' . ($_POST['return_to'] ?? 'recipes.php'));
+            // Validate before redirecting — same pattern as community.php's
+            // delete_post — so return_to can't be used to send someone to an
+            // off-site URL crafted into the form.
+            $returnTo = trim($_POST['return_to'] ?? '');
+            if ($returnTo !== '' && str_starts_with($returnTo, 'recipes.php')) {
+                header('Location: ' . $returnTo);
+            } else {
+                header('Location: recipes.php');
+            }
             exit;
         } catch (PDOException $e) {
             $cardMessage = 'Something went wrong updating your favourites.';
@@ -116,6 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
         // cleanly with everything else if anything later fails.
         $ingIds     = $_POST['ingredient_id'] ?? [];
         $ingNewName = $_POST['new_ingredient_name'] ?? [];
+        $ingNewDesc = $_POST['new_ingredient_description'] ?? [];
         $ingQty     = $_POST['quantity'] ?? [];
         $ingUnit    = $_POST['unit_id'] ?? [];
         $ingredientRows = [];
@@ -127,7 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             if ($rawId === '__new__') {
                 $newName = trim($ingNewName[$i] ?? '');
                 if ($newName === '' || mb_strlen($newName) > 150) continue;
-                $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'quantity' => $qty, 'unit_id' => $uId];
+                $newDesc = trim($ingNewDesc[$i] ?? '');
+                if (mb_strlen($newDesc) > 300) $newDesc = mb_substr($newDesc, 0, 300);
+                $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'description' => $newDesc, 'quantity' => $qty, 'unit_id' => $uId];
             } else {
                 $id = (int) $rawId;
                 if ($id <= 0) continue;
@@ -176,19 +188,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
                      VALUES (?, ?, ?, ?)'
                 );
                 $findIngStmt = $pdo->prepare('SELECT ingredient_id FROM INGREDIENT WHERE LOWER(ingredient_name) = LOWER(?)');
-                $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name) VALUES (?)');
+                $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name, description) VALUES (?, ?)');
 
                 $seenIngredients = [];
                 foreach ($ingredientRows as $row) {
                     if ($row['type'] === 'new') {
                         // Re-use an existing ingredient with the same name (case-insensitive)
                         // rather than creating a near-duplicate like "Onion" and "onion".
+                        // The typed description only ever applies to a genuinely new
+                        // ingredient row — it's discarded here, never used to edit one
+                        // that already exists.
                         $findIngStmt->execute([$row['name']]);
                         $existingId = $findIngStmt->fetchColumn();
                         if ($existingId) {
                             $resolvedId = (int) $existingId;
                         } else {
-                            $newIngStmt->execute([$row['name']]);
+                            $newIngStmt->execute([$row['name'], $row['description'] !== '' ? $row['description'] : null]);
                             $resolvedId = (int) $pdo->lastInsertId();
                         }
                     } else {
@@ -526,6 +541,7 @@ require_once 'includes/header.php';
                 <option value="__new__">+ Add a new ingredient…</option>
               </select>
               <input type="text" name="new_ingredient_name[]" class="ingredient-new-name" placeholder="Ingredient name" maxlength="150" style="display:none;">
+              <input type="text" name="new_ingredient_description[]" class="ingredient-new-description" placeholder="Short description (optional)" maxlength="300" style="display:none;">
             </div>
             <input type="number" name="quantity[]" step="0.01" min="0" placeholder="Qty">
             <select name="unit_id[]">
@@ -557,56 +573,117 @@ require_once 'includes/header.php';
     </div>
   <?php endif; ?>
 
+  <?php
+    $activeFilterChips = [];
+    $chipQuery = $_GET;
+    if ($filterCuisine) {
+        foreach ($cuisines as $c) {
+            if ((int) $c['cuisine_id'] === $filterCuisine) {
+                $q = $chipQuery; unset($q['cuisine']);
+                $activeFilterChips[] = ['label' => $c['cuisine_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterCategory) {
+        foreach ($categories as $c) {
+            if ((int) $c['category_id'] === $filterCategory) {
+                $q = $chipQuery; unset($q['category']);
+                $activeFilterChips[] = ['label' => $c['category_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterDifficulty) {
+        foreach ($difficulties as $d) {
+            if ((int) $d['difficulty_id'] === $filterDifficulty) {
+                $q = $chipQuery; unset($q['difficulty']);
+                $activeFilterChips[] = ['label' => $d['difficulty_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+    if ($filterDietary) {
+        foreach ($dietaryOptions as $dt) {
+            if ((int) $dt['dietary_id'] === $filterDietary) {
+                $q = $chipQuery; unset($q['dietary']);
+                $activeFilterChips[] = ['label' => $dt['dietary_name'], 'href' => 'recipes.php' . ($q ? '?' . http_build_query($q) : '')];
+                break;
+            }
+        }
+    }
+  ?>
+
   <form class="filter-bar" method="GET" action="recipes.php">
-    <div class="filter-field">
-      <label for="q">Search</label>
-      <input type="text" id="q" name="q" placeholder="Search recipes…" value="<?php echo htmlspecialchars($searchTerm); ?>">
+    <div class="filter-bar-top">
+      <div class="filter-field filter-field-search">
+        <label for="q">Search</label>
+        <input type="text" id="q" name="q" placeholder="Search recipes…" value="<?php echo htmlspecialchars($searchTerm); ?>">
+      </div>
+      <button type="button" class="filter-toggle-btn" data-toggle-panel="filterPanel" aria-expanded="false" aria-controls="filterPanel">
+        Filters
+        <?php if ($activeFilterCount > 0): ?><span class="filter-active-count"><?php echo $activeFilterCount; ?></span><?php endif; ?>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <button type="submit" class="btn btn-primary">Apply</button>
     </div>
-    <div class="filter-field">
-      <label for="cuisine">Cuisine</label>
-      <select id="cuisine" name="cuisine">
-        <option value="">All cuisines</option>
-        <?php foreach ($cuisines as $c): ?>
-          <option value="<?php echo $c['cuisine_id']; ?>" <?php echo $filterCuisine === (int) $c['cuisine_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($c['cuisine_name']); ?>
-          </option>
+
+    <?php if ($activeFilterChips): ?>
+      <div class="filter-chips">
+        <?php foreach ($activeFilterChips as $chip): ?>
+          <a href="<?php echo htmlspecialchars($chip['href']); ?>" class="filter-chip"><?php echo htmlspecialchars($chip['label']); ?> <span class="filter-chip-x" aria-hidden="true">&times;</span></a>
         <?php endforeach; ?>
-      </select>
+      </div>
+    <?php endif; ?>
+
+    <div class="filter-panel" id="filterPanel">
+      <div class="filter-field">
+        <label for="cuisine">Cuisine</label>
+        <select id="cuisine" name="cuisine">
+          <option value="">All cuisines</option>
+          <?php foreach ($cuisines as $c): ?>
+            <option value="<?php echo $c['cuisine_id']; ?>" <?php echo $filterCuisine === (int) $c['cuisine_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($c['cuisine_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">All categories</option>
+          <?php foreach ($categories as $c): ?>
+            <option value="<?php echo $c['category_id']; ?>" <?php echo $filterCategory === (int) $c['category_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($c['category_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="difficulty">Difficulty</label>
+        <select id="difficulty" name="difficulty">
+          <option value="">Any difficulty</option>
+          <?php foreach ($difficulties as $d): ?>
+            <option value="<?php echo $d['difficulty_id']; ?>" <?php echo $filterDifficulty === (int) $d['difficulty_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($d['difficulty_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="filter-field">
+        <label for="dietary">Dietary</label>
+        <select id="dietary" name="dietary">
+          <option value="">Any dietary need</option>
+          <?php foreach ($dietaryOptions as $dt): ?>
+            <option value="<?php echo $dt['dietary_id']; ?>" <?php echo $filterDietary === (int) $dt['dietary_id'] ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($dt['dietary_name']); ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-primary filter-panel-apply">Apply filters</button>
     </div>
-    <div class="filter-field">
-      <label for="category">Category</label>
-      <select id="category" name="category">
-        <option value="">All categories</option>
-        <?php foreach ($categories as $c): ?>
-          <option value="<?php echo $c['category_id']; ?>" <?php echo $filterCategory === (int) $c['category_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($c['category_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label for="difficulty">Difficulty</label>
-      <select id="difficulty" name="difficulty">
-        <option value="">Any difficulty</option>
-        <?php foreach ($difficulties as $d): ?>
-          <option value="<?php echo $d['difficulty_id']; ?>" <?php echo $filterDifficulty === (int) $d['difficulty_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($d['difficulty_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <div class="filter-field">
-      <label for="dietary">Dietary</label>
-      <select id="dietary" name="dietary">
-        <option value="">Any dietary need</option>
-        <?php foreach ($dietaryOptions as $dt): ?>
-          <option value="<?php echo $dt['dietary_id']; ?>" <?php echo $filterDietary === (int) $dt['dietary_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($dt['dietary_name']); ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-    <button type="submit" class="btn btn-primary">Filter</button>
+
     <?php if ($filterCuisine || $filterCategory || $filterDifficulty || $filterDietary || $searchTerm !== ''): ?>
       <div class="filter-clear"><a href="recipes.php">Clear all filters</a></div>
     <?php endif; ?>
@@ -636,20 +713,9 @@ require_once 'includes/header.php';
             <span class="badge"><?php echo htmlspecialchars($recipe['difficulty_name']); ?></span>
           </div>
           <div class="recipe-grid-body">
-            <div class="recipe-grid-meta">
-              <span><?php echo htmlspecialchars($recipe['cuisine_name']); ?></span>
-              <span><?php echo htmlspecialchars($recipe['category_name']); ?></span>
-              <span><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
-            </div>
+            <span class="recipe-grid-meta"><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
             <h3><?php echo htmlspecialchars($recipe['recipe_name']); ?></h3>
             <p><?php echo htmlspecialchars($recipe['description']); ?></p>
-            <?php if (!empty($recipe['dietary_tags'])): ?>
-              <div class="dietary-tags">
-                <?php foreach ($recipe['dietary_tags'] as $tag): ?>
-                  <span class="dietary-tag"><?php echo htmlspecialchars($tag); ?></span>
-                <?php endforeach; ?>
-              </div>
-            <?php endif; ?>
             <a href="recipe-detail.php?id=<?php echo (int) $recipe['recipe_id']; ?>" class="btn btn-ghost">View recipe &rarr;</a>
 
             <?php
@@ -691,6 +757,7 @@ require_once 'includes/header.php';
         </article>
       <?php endforeach; ?>
     </div>
+  <?php endif; ?>
 
     <?php if ($totalPages > 1): ?>
       <nav class="pagination" aria-label="Recipe results pages">
@@ -713,7 +780,6 @@ require_once 'includes/header.php';
         <?php endif; ?>
       </nav>
     <?php endif; ?>
-  <?php endif; ?>
 </div>
 
 <div style="height: 60px;"></div>

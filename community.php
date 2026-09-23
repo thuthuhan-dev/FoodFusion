@@ -54,6 +54,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
             $formError = 'Give your post a title under 150 characters.';
         } elseif ($content === '') {
             $formError = 'Your post needs some content before you can share it.';
+        } elseif (mb_strlen($content) > 5000) {
+            $formError = 'Your post content is too long — keep it under 5000 characters.';
+        } elseif (array_filter($steps, fn($s) => mb_strlen($s) > 500)) {
+            $formError = 'Each step must be under 500 characters.';
         } elseif ($pdo) {
             try {
                 $pdo->beginTransaction();
@@ -363,7 +367,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field">
                 <label for="tip_content">Your tip</label>
-                <textarea id="tip_content" name="post_content" required placeholder="Describe the tip…"></textarea>
+                <textarea id="tip_content" name="post_content" required maxlength="5000" placeholder="Describe the tip…"></textarea>
               </div>
               <div class="field">
                 <label for="tip_image">Photo (optional)</label>
@@ -372,7 +376,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field" id="tipSteps">
                 <label>Steps (optional)</label>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Step 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Step 1"></div>
               </div>
               <button type="button" class="btn btn-ghost" data-add-step="tipSteps" style="margin-bottom:16px; width:100%;">+ Add another step</button>
               <button type="submit" class="btn btn-primary" style="width:100%;">Post Tip</button>
@@ -401,7 +405,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field">
                 <label for="exp_content">Tell the story</label>
-                <textarea id="exp_content" name="post_content" required placeholder="What happened, what you learned…"></textarea>
+                <textarea id="exp_content" name="post_content" required maxlength="5000" placeholder="What happened, what you learned…"></textarea>
               </div>
               <div class="field">
                 <label for="exp_image">Photo (optional)</label>
@@ -410,7 +414,7 @@ require_once 'includes/header.php';
               </div>
               <div class="field" id="expSteps">
                 <label>Moments (optional)</label>
-                <div class="step-input-row"><input type="text" name="step[]" placeholder="Moment 1"></div>
+                <div class="step-input-row"><input type="text" name="step[]" maxlength="500" placeholder="Moment 1"></div>
               </div>
               <button type="button" class="btn btn-ghost" data-add-step="expSteps" style="margin-bottom:16px; width:100%;">+ Add another moment</button>
               <button type="submit" class="btn btn-primary" style="width:100%;">Post Experience</button>
@@ -480,7 +484,7 @@ require_once 'includes/header.php';
             <h3><?php echo htmlspecialchars($post['post_title']); ?></h3>
 
             <?php if ($post['post_type'] === 'Recipe' && !empty($post['recipe_name'])):
-              $thumb = !empty($post['recipe_image']) ? $post['recipe_image'] : placeholder_img('recipe-' . $post['recipe_id'], 200, 200);
+              $thumb = !empty($post['recipe_image']) ? $post['recipe_image'] : placeholder_img('recipe-' . $post['recipe_id'], 800, 450);
               $showRecipeContent = !in_array(trim((string) $post['post_content']), $genericRecipeText, true);
             ?>
               <div class="recipe-post-card" style="border:none; padding:0; box-shadow:none; margin-bottom:14px;">
@@ -510,14 +514,14 @@ require_once 'includes/header.php';
             <?php endif; ?>
 
             <div class="post-actions">
-              <form method="POST" action="community.php" style="display:inline;" data-ajax-action="toggle_like">
+              <form method="POST" action="community.php" data-ajax-action="toggle_like">
                 <input type="hidden" name="action" value="toggle_like">
                 <input type="hidden" name="post_id" value="<?php echo (int) $post['post_id']; ?>">
                 <input type="hidden" name="tab" value="<?php echo htmlspecialchars($activeTab); ?>">
                 <input type="hidden" name="page" value="<?php echo (int) $page; ?>">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
                 <button type="submit" class="post-like-btn <?php echo $post['liked_by_me'] ? 'active' : ''; ?>" <?php echo empty($_SESSION['user_id']) ? 'disabled title="Log in to like"' : ''; ?>>
-                  <svg viewBox="0 0 24 24" fill="<?php echo $post['liked_by_me'] ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7-4.5-9.5-8.5C.5 8.5 2.5 5 6 5c2 0 3.5 1.2 4 2.2C10.5 6.2 12 5 14 5c3.5 0 5.5 3.5 3.5 7.5C15 16.5 12 21 12 21z"/></svg>
+                  <svg viewBox="0 0 24 24" fill="<?php echo $post['liked_by_me'] ? 'currentColor' : 'none'; ?>" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                   <span class="action-count"><?php echo (int) $post['like_count']; ?></span>
                 </button>
               </form>

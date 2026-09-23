@@ -114,6 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
 
                 $ingIds     = $_POST['ingredient_id'] ?? [];
                 $ingNewName = $_POST['new_ingredient_name'] ?? [];
+                $ingNewDesc = $_POST['new_ingredient_description'] ?? [];
                 $ingQty     = $_POST['quantity'] ?? [];
                 $ingUnit    = $_POST['unit_id'] ?? [];
                 $ingredientRows = [];
@@ -124,7 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                     if ($rawId === '__new__') {
                         $newName = trim($ingNewName[$i] ?? '');
                         if ($newName === '' || mb_strlen($newName) > 150) continue;
-                        $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'quantity' => $qty, 'unit_id' => $uId];
+                        $newDesc = trim($ingNewDesc[$i] ?? '');
+                        if (mb_strlen($newDesc) > 300) $newDesc = mb_substr($newDesc, 0, 300);
+                        $ingredientRows[] = ['type' => 'new', 'name' => $newName, 'description' => $newDesc, 'quantity' => $qty, 'unit_id' => $uId];
                     } else {
                         $id = (int) $rawId;
                         if ($id <= 0) continue;
@@ -174,14 +177,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
 
                     $ingStmt = $pdo->prepare('INSERT INTO RECIPE_INGREDIENT (recipe_id, ingredient_id, unit_id, quantity) VALUES (?, ?, ?, ?)');
                     $findIngStmt = $pdo->prepare('SELECT ingredient_id FROM INGREDIENT WHERE LOWER(ingredient_name) = LOWER(?)');
-                    $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name) VALUES (?)');
+                    $newIngStmt  = $pdo->prepare('INSERT INTO INGREDIENT (ingredient_name, description) VALUES (?, ?)');
                     $seenIngredients = [];
                     foreach ($ingredientRows as $row) {
                         if ($row['type'] === 'new') {
+                            // As on the create-recipe form, the typed description only
+                            // applies when this is genuinely a new ingredient row — an
+                            // existing ingredient found by name is reused as-is.
                             $findIngStmt->execute([$row['name']]);
                             $existingId = $findIngStmt->fetchColumn();
                             $resolvedId = $existingId ? (int) $existingId : (function() use ($newIngStmt, $pdo, $row) {
-                                $newIngStmt->execute([$row['name']]);
+                                $newIngStmt->execute([$row['name'], $row['description'] !== '' ? $row['description'] : null]);
                                 return (int) $pdo->lastInsertId();
                             })();
                         } else {
@@ -330,7 +336,7 @@ if ($pdo && $recipeId > 0) {
             $dietaryIds  = array_column($dietaryRows, 'dietary_id');
 
             $ingStmt = $pdo->prepare(
-                'SELECT ri.ingredient_id, ri.unit_id, ri.quantity, i.ingredient_name, un.unit_symbol
+                'SELECT ri.ingredient_id, ri.unit_id, ri.quantity, i.ingredient_name, i.description AS ingredient_description, un.unit_symbol
                  FROM RECIPE_INGREDIENT ri
                  JOIN INGREDIENT i ON ri.ingredient_id = i.ingredient_id
                  JOIN UNIT un ON ri.unit_id = un.unit_id
@@ -599,6 +605,7 @@ require_once 'includes/header.php';
                         <option value="__new__">+ Add a new ingredient…</option>
                       </select>
                       <input type="text" name="new_ingredient_name[]" class="ingredient-new-name" placeholder="Ingredient name" maxlength="150" style="display:none;">
+                      <input type="text" name="new_ingredient_description[]" class="ingredient-new-description" placeholder="Short description (optional)" maxlength="300" style="display:none;">
                     </div>
                     <input type="number" name="quantity[]" step="0.01" min="0" placeholder="Qty" value="<?php echo htmlspecialchars(rtrim(rtrim(number_format((float) $ing['quantity'], 2, '.', ''), '0'), '.')); ?>">
                     <select name="unit_id[]">
@@ -658,7 +665,14 @@ require_once 'includes/header.php';
           <ul class="ingredient-list">
             <?php foreach ($ingredients as $ing): ?>
               <li>
-                <span><?php echo htmlspecialchars($ing['ingredient_name']); ?></span>
+                <span>
+                  <?php echo htmlspecialchars($ing['ingredient_name']); ?>
+                  <?php if (!empty($ing['ingredient_description'])): ?>
+                    <button type="button" class="ingredient-info-btn" data-tooltip="<?php echo htmlspecialchars($ing['ingredient_description']); ?>" aria-label="About <?php echo htmlspecialchars($ing['ingredient_name']); ?>">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>
+                    </button>
+                  <?php endif; ?>
+                </span>
                 <span class="qty"><?php echo format_qty($ing['quantity']); ?> <?php echo htmlspecialchars($ing['unit_symbol']); ?></span>
               </li>
             <?php endforeach; ?>
@@ -682,8 +696,17 @@ require_once 'includes/header.php';
         <?php if ($recipeCard): ?>
           <?php $cardDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $recipeCard['card_title']))) . '.pdf'; ?>
           <div class="recipe-card-download">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-            <span>Printable version available — <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>" download="<?php echo htmlspecialchars($cardDownloadName); ?>"><?php echo htmlspecialchars($recipeCard['card_title']); ?></a></span>
+            <span class="recipe-card-download-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+            </span>
+            <div class="recipe-card-download-body">
+              <span class="recipe-card-download-label">Printable version</span>
+              <h4><?php echo htmlspecialchars($recipeCard['card_title']); ?></h4>
+            </div>
+            <a href="<?php echo htmlspecialchars($recipeCard['file_url']); ?>" download="<?php echo htmlspecialchars($cardDownloadName); ?>" class="btn btn-outline recipe-card-download-btn" aria-label="Download printable recipe card">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              Download
+            </a>
           </div>
         <?php endif; ?>
       </aside>

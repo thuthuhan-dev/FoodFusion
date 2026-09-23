@@ -4,6 +4,11 @@ require_once 'includes/db.php';
 const MAX_FAILED_ATTEMPTS = 3;
 const LOCKOUT_MINUTES = 3;
 
+// Used only to burn roughly the same bcrypt cost on a nonexistent-email
+// attempt as a real password check costs — see the !$user branch below.
+// Never a real account's hash.
+const DUMMY_PASSWORD_HASH = '$2y$12$OvJAk.ZCiJ6wP5TgOCsRuuFq3eYZl41NKi4C64E19U5NUad/DbIMm';
+
 // There is only one login FORM in the whole site — the Login modal in
 // includes/header.php. This file just processes the submission and sends
 // the person back with either a session (success) or an error (failure).
@@ -49,6 +54,12 @@ try {
     $user = $stmt->fetch();
 
     if (!$user) {
+        // Run a password_verify() anyway, against a hash nothing matches, so
+        // this path takes about as long as a real wrong-password check.
+        // Without it, "email not registered" responds near-instantly while
+        // "wrong password" takes bcrypt's ~100ms, letting someone measuring
+        // response time enumerate which emails have accounts.
+        password_verify($password, DUMMY_PASSWORD_HASH);
         fail_login('Invalid email or password.', $email);
     }
 

@@ -14,16 +14,29 @@ function placeholder_img($seed, $w = 600, $h = 600) {
     return "https://picsum.photos/seed/" . urlencode($seed) . "/$w/$h";
 }
 
-/* ---------- Fresh from the Kitchen: two newest recipes + one community post ---------- */
+/**
+ * "Posted today" / "2 days ago" style label for the Fresh from the
+ * Kitchen cards.
+ */
+function relative_day_label($datetime) {
+    $days = (int) floor((time() - strtotime($datetime)) / 86400);
+    if ($days <= 0) return 'Posted today';
+    if ($days === 1) return '1 day ago';
+    return $days . ' days ago';
+}
+
+/* ---------- Fresh from the Kitchen: three newest recipes ---------- */
 $recentRecipes = [];
 if ($pdo) {
     try {
         $stmt = $pdo->query(
-            "SELECT r.recipe_id, r.recipe_name, r.description, r.prep_time, r.image_url, c.cuisine_name
+            "SELECT r.recipe_id, r.recipe_name, r.description, r.prep_time, r.image_url, r.created_at,
+                    c.cuisine_name, cat.category_name
              FROM RECIPE r
              JOIN CUISINE_TYPE c ON r.cuisine_id = c.cuisine_id
+             JOIN RECIPE_CATEGORY cat ON r.category_id = cat.category_id
              ORDER BY r.created_at DESC
-             LIMIT 2"
+             LIMIT 3"
         );
         $recentRecipes = $stmt->fetchAll();
     } catch (PDOException $e) {
@@ -32,8 +45,9 @@ if ($pdo) {
 }
 if (empty($recentRecipes)) {
     $recentRecipes = [
-        ['recipe_id' => 1, 'recipe_name' => 'Chicken Tagine with Preserved Lemon', 'description' => 'Slow-simmered chicken with olives, preserved lemon, and warm spices — the dish that started it all for most home cooks here.', 'prep_time' => 25, 'cuisine_name' => 'Moroccan', 'image_url' => null],
-        ['recipe_id' => 2, 'recipe_name' => 'Msemen with Honey and Argan Oil', 'description' => 'Flaky square pancakes, folded and pan-fried, best eaten warm with honey and a drizzle of argan oil.', 'prep_time' => 40, 'cuisine_name' => 'Moroccan', 'image_url' => null],
+        ['recipe_id' => 1, 'recipe_name' => 'Msemen with Honey and Argan Oil', 'description' => 'Laminated by hand and folded four times, so the layers separate on the griddle instead of steaming shut.', 'prep_time' => 40, 'cuisine_name' => 'Moroccan', 'category_name' => 'Breakfast', 'image_url' => null, 'created_at' => date('Y-m-d H:i:s')],
+        ['recipe_id' => 3, 'recipe_name' => 'Harira Soup with Lentils', 'description' => 'A hearty tomato and lentil soup, traditionally the first thing eaten to break the fast.', 'prep_time' => 20, 'cuisine_name' => 'Moroccan', 'category_name' => 'Soup', 'image_url' => null, 'created_at' => date('Y-m-d H:i:s', strtotime('-2 days'))],
+        ['recipe_id' => 6, 'recipe_name' => 'Seffa with Almonds and Cinnamon', 'description' => 'Steamed couscous tossed with butter, orange blossom water, and toasted almonds.', 'prep_time' => 35, 'cuisine_name' => 'Moroccan', 'category_name' => 'Dessert', 'image_url' => null, 'created_at' => date('Y-m-d H:i:s', strtotime('-3 days'))],
     ];
 }
 
@@ -56,16 +70,41 @@ if (!$spotlightPost) {
     $spotlightPost = ['post_id' => null, 'post_type' => 'Culinary Experience', 'post_title' => 'The Friday Couscous Ritual', 'post_content' => 'Every Friday my grandmother steamed couscous three times by hand. This week I finally learned why it matters.', 'first_name' => 'Amina'];
 }
 
+/* ---------- Featured recipes: manually curated via is_featured = 1
+   directly in the database — there is no in-app toggle for this. ---------- */
+$featuredRecipes = [];
+if ($pdo) {
+    try {
+        $stmt = $pdo->query(
+            "SELECT r.recipe_id, r.recipe_name, r.description, r.prep_time, r.cook_time, r.image_url,
+                    c.cuisine_name, cat.category_name, d.difficulty_name
+             FROM RECIPE r
+             JOIN CUISINE_TYPE c ON r.cuisine_id = c.cuisine_id
+             JOIN RECIPE_CATEGORY cat ON r.category_id = cat.category_id
+             JOIN DIFFICULTY d ON r.difficulty_id = d.difficulty_id
+             WHERE r.is_featured = 1
+             ORDER BY r.created_at DESC
+             LIMIT 3"
+        );
+        $featuredRecipes = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        $featuredRecipes = [];
+    }
+}
+
 /* ---------- Popular recipes carousel ---------- */
 $popularRecipes = [];
 if ($pdo) {
     try {
         $stmt = $pdo->query(
-            "SELECT r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name
+            "SELECT r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name,
+                    COUNT(f.favorite_id) AS favorite_count
              FROM RECIPE r
              JOIN CUISINE_TYPE c ON r.cuisine_id = c.cuisine_id
              JOIN DIFFICULTY d ON r.difficulty_id = d.difficulty_id
-             ORDER BY r.created_at DESC
+             LEFT JOIN RECIPE_FAVORITE f ON f.recipe_id = r.recipe_id
+             GROUP BY r.recipe_id, r.recipe_name, r.prep_time, r.image_url, c.cuisine_name, d.difficulty_name, r.created_at
+             ORDER BY favorite_count DESC, r.created_at DESC
              LIMIT 8"
         );
         $popularRecipes = $stmt->fetchAll();
@@ -218,6 +257,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
     }
 }
 
+/* ---------- Delete an event (organizer only) ---------- */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_event') {
+    $submittedToken = $_POST['csrf_token'] ?? '';
+    $targetId = (int) ($_POST['event_id'] ?? 0);
+
+    if (!hash_equals($_SESSION['csrf_token'] ?? '', $submittedToken)) {
+        $eventError = 'Your session expired — please try again.';
+    } elseif (empty($_SESSION['user_id'])) {
+        $eventError = 'Log in to manage events.';
+    } elseif ($pdo && $targetId > 0) {
+        try {
+            // Ownership check: same organizer test as edit_event above.
+            $orgCheck = $pdo->prepare(
+                "SELECT 1 FROM EVENT_PARTICIPANT ep
+                 JOIN EVENT_ROLE er ON ep.role_id = er.role_id
+                 WHERE ep.event_id = ? AND ep.user_id = ? AND er.role_name = 'Organizer'"
+            );
+            $orgCheck->execute([$targetId, $_SESSION['user_id']]);
+            $isOrganizer = (bool) $orgCheck->fetch();
+
+            if (!$isOrganizer) {
+                $eventError = 'You can only delete events you organized.';
+            } else {
+                $imgStmt = $pdo->prepare('SELECT image_url FROM EVENT WHERE event_id = ?');
+                $imgStmt->execute([$targetId]);
+                $oldImage = $imgStmt->fetchColumn();
+
+                $pdo->beginTransaction();
+
+                // Remove everyone's participation (organizer + participants)
+                // before removing the event itself.
+                $pdo->prepare('DELETE FROM EVENT_PARTICIPANT WHERE event_id = ?')->execute([$targetId]);
+                $del = $pdo->prepare('DELETE FROM EVENT WHERE event_id = ?');
+                $del->execute([$targetId]);
+
+                $pdo->commit();
+
+                if ($del->rowCount() > 0 && !empty($oldImage)) {
+                    delete_uploaded_file($oldImage);
+                }
+
+                header('Location: index.php?event_deleted=1#events');
+                exit;
+            }
+        } catch (PDOException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('FoodFusion delete_event: ' . $e->getMessage());
+            $eventError = 'Something went wrong deleting that event. Please try again.';
+        }
+    }
+}
+
 /* ---------- Join / leave an event (Participant role) ---------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'toggle_participation') {
     $submittedToken = $_POST['csrf_token'] ?? '';
@@ -256,6 +347,9 @@ if (isset($_GET['event_added'])) {
 }
 if (isset($_GET['event_updated'])) {
     $eventSuccess = 'Your event has been updated.';
+}
+if (isset($_GET['event_deleted'])) {
+    $eventSuccess = 'Your event has been deleted.';
 }
 
 /* ---------- Upcoming events ---------- */
@@ -342,61 +436,102 @@ if (empty($events)) {
     ];
 }
 
+/* ---------- Mission stats (homepage "Our mission" numbers) ---------- */
+$statRecipeCount = 0;
+$statMemberCount = 0;
+$statPostedThisWeek = 0;
+$statUpcomingEventCount = 0;
+if ($pdo) {
+    try {
+        $statRecipeCount = (int) $pdo->query('SELECT COUNT(*) FROM RECIPE')->fetchColumn();
+    } catch (PDOException $e) {
+        $statRecipeCount = 0;
+    }
+    try {
+        $statMemberCount = (int) $pdo->query('SELECT COUNT(*) FROM USERS')->fetchColumn();
+    } catch (PDOException $e) {
+        $statMemberCount = 0;
+    }
+    try {
+        $recipesThisWeek = (int) $pdo->query("SELECT COUNT(*) FROM RECIPE WHERE created_at >= (NOW() - INTERVAL 7 DAY)")->fetchColumn();
+        $postsThisWeek   = (int) $pdo->query("SELECT COUNT(*) FROM COMMUNITY_POST WHERE created_at >= (NOW() - INTERVAL 7 DAY)")->fetchColumn();
+        $statPostedThisWeek = $recipesThisWeek + $postsThisWeek;
+    } catch (PDOException $e) {
+        $statPostedThisWeek = 0;
+    }
+    try {
+        $statUpcomingEventCount = (int) $pdo->query("SELECT COUNT(*) FROM EVENT WHERE event_date >= CURDATE()")->fetchColumn();
+    } catch (PDOException $e) {
+        $statUpcomingEventCount = 0;
+    }
+}
+if ($statRecipeCount < 1) { $statRecipeCount = 128; }
+if ($statMemberCount < 1) { $statMemberCount = 2300; }
+if ($statPostedThisWeek < 1) { $statPostedThisWeek = 14; }
+if ($statUpcomingEventCount < 1) { $statUpcomingEventCount = count($events); }
+
 require_once 'includes/header.php';
 ?>
 
+<?php
+  $heroSlidesContent = [
+    [
+      'eyebrow' => 'Cook. Share. Belong.',
+      'title' => 'Where Culinary Creativity Meets Community.',
+      'lede' => 'Discover a world of flavor rooted in Moroccan tradition, share your favourite home-cooked meals, and connect with food enthusiasts who believe every dish tells a story.',
+      'img' => 'assets/img/share.jpg',
+      'alt' => 'Moroccan tagine and spices',
+      'actions' => [
+        ['label' => 'Start Cooking', 'type' => 'modal'],
+        ['label' => 'Explore Recipes', 'href' => 'recipes.php'],
+      ],
+    ],
+    [
+      'eyebrow' => '2,300+ Members',
+      'title' => 'Join a Community That Shares Its Table.',
+      'lede' => 'Post your own recipes, swap kitchen tips, and follow along as members cook their way through the same dishes — no recipe too simple, no cook too new.',
+      'img' => 'assets/img/cm.jpg',
+      'alt' => 'Fresh herbs and ingredients for a shared meal',
+      'actions' => [
+        ['label' => "Join Us — it's free", 'type' => 'modal'],
+        ['label' => 'Visit the Cookbook', 'href' => 'community.php'],
+      ],
+    ],
+    [
+      'eyebrow' => 'Live & Online',
+      'title' => 'Learn Hands-On at a Cooking Event.',
+      'lede' => 'From sourdough masterclasses to spice market tours, book a seat at an upcoming FoodFusion event and cook alongside people who love food as much as you do.',
+      'img' => 'assets/img/k.jpg',
+      'alt' => 'Hands-on cooking class in progress',
+      'actions' => [
+        ['label' => 'See Upcoming Events', 'href' => '#events'],
+        ['label' => 'Explore Recipes', 'href' => 'recipes.php'],
+      ],
+    ],
+  ];
+?>
 <section class="hero-carousel">
 
-  <div class="hero-slide grad-1 active">
-    <div class="wrap hero-slide-inner">
-      <div>
-        <span class="eyebrow">Cook. Share. Belong.</span>
-        <h1>Where Culinary Creativity Meets Community.</h1>
-        <p class="lede">Discover a world of flavor rooted in Moroccan tradition, share your favourite home-cooked meals, and connect with food enthusiasts who believe every dish tells a story.</p>
-        <div class="hero-actions">
-          <button type="button" class="btn btn-primary" data-open-modal>Start Cooking</button>
-          <a href="recipes.php" class="btn btn-outline">Explore Recipes</a>
-        </div>
-      </div>
-      <div class="hero-visual-slide">
-        <img src="assets/img/share.jpg" alt="Moroccan tagine and spices" loading="lazy">
-      </div>
-    </div>
-  </div>
-
-  <div class="hero-slide grad-2">
-    <div class="wrap hero-slide-inner">
-      <div>
-        <span class="eyebrow">2,300+ Members</span>
-        <h1>Join a Community That Shares Its Table.</h1>
-        <p class="lede">Post your own recipes, swap kitchen tips, and follow along as members cook their way through the same dishes — no recipe too simple, no cook too new.</p>
-        <div class="hero-actions">
-          <button type="button" class="btn btn-primary" data-open-modal>Join Us — it's free</button>
-          <a href="community.php" class="btn btn-outline">Visit the Cookbook</a>
-        </div>
-      </div>
-      <div class="hero-visual-slide">
-        <img src="assets/img/cm.jpg" alt="Fresh herbs and ingredients for a shared meal" loading="lazy">
+  <?php foreach ($heroSlidesContent as $hi => $hSlide): ?>
+  <div class="hero-slide hero-event-slide<?php echo $hi === 0 ? ' active' : ''; ?>">
+    <img class="hero-event-photo" src="<?php echo htmlspecialchars($hSlide['img']); ?>" alt="<?php echo htmlspecialchars($hSlide['alt']); ?>" loading="<?php echo $hi === 0 ? 'eager' : 'lazy'; ?>">
+    <div class="hero-event-scrim"></div>
+    <div class="wrap hero-event-inner">
+      <span class="eyebrow"><?php echo htmlspecialchars($hSlide['eyebrow']); ?></span>
+      <h1><?php echo htmlspecialchars($hSlide['title']); ?></h1>
+      <p class="lede"><?php echo htmlspecialchars($hSlide['lede']); ?></p>
+      <div class="hero-actions">
+        <?php foreach ($hSlide['actions'] as $ai => $action): ?>
+          <?php if (($action['type'] ?? '') === 'modal'): ?>
+            <button type="button" class="btn <?php echo $ai === 0 ? 'btn-primary' : 'btn-outline'; ?>" data-open-modal="joinModal"><?php echo htmlspecialchars($action['label']); ?></button>
+          <?php else: ?>
+            <a href="<?php echo htmlspecialchars($action['href']); ?>" class="btn <?php echo $ai === 0 ? 'btn-primary' : 'btn-outline'; ?>"><?php echo htmlspecialchars($action['label']); ?></a>
+          <?php endif; ?>
+        <?php endforeach; ?>
       </div>
     </div>
   </div>
-
-  <div class="hero-slide grad-3">
-    <div class="wrap hero-slide-inner">
-      <div>
-        <span class="eyebrow">Live &amp; Online</span>
-        <h1>Learn Hands-On at a Cooking Event.</h1>
-        <p class="lede">From sourdough masterclasses to spice market tours, book a seat at an upcoming FoodFusion event and cook alongside people who love food as much as you do.</p>
-        <div class="hero-actions">
-          <a href="#events" class="btn btn-primary">See Upcoming Events</a>
-          <a href="recipes.php" class="btn btn-outline">Explore Recipes</a>
-        </div>
-      </div>
-      <div class="hero-visual-slide">
-        <img src="assets/img/k.jpg" alt="Hands-on cooking class in progress" loading="lazy">
-      </div>
-    </div>
-  </div>
+  <?php endforeach; ?>
 
   <button type="button" class="hero-arrow prev" id="heroPrev" aria-label="Previous slide">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
@@ -404,14 +539,14 @@ require_once 'includes/header.php';
   <button type="button" class="hero-arrow next" id="heroNext" aria-label="Next slide">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
   </button>
+  <span class="hero-slide-counter"><span id="heroSlideCounter">1</span>/<?php echo count($heroSlidesContent); ?> &middot; auto</span>
   <div class="hero-dots">
-    <button type="button" class="hero-dot active" aria-label="Slide 1"></button>
-    <button type="button" class="hero-dot" aria-label="Slide 2"></button>
-    <button type="button" class="hero-dot" aria-label="Slide 3"></button>
+    <?php foreach ($heroSlidesContent as $hi => $_): ?>
+      <button type="button" class="hero-dot<?php echo $hi === 0 ? ' active' : ''; ?>" aria-label="Slide <?php echo $hi + 1; ?>"></button>
+    <?php endforeach; ?>
   </div>
 </section>
 
-<div class="divider-zellige" aria-hidden="true"></div>
 
 <!-- FoodFusion mission — required by the brief: a brief introduction to
      FoodFusion's mission on the landing page. -->
@@ -420,60 +555,36 @@ require_once 'includes/header.php';
     <div class="mission-layout">
       <div class="mission-intro">
         <span class="eyebrow">Our mission</span>
-        <h2>Keeping home cooking, and the stories behind it, from being lost</h2>
+        <h2>Cooking is better when the recipe comes with the reason</h2>
         <p class="mission-statement">
-          FoodFusion exists to promote home cooking and culinary creativity by giving food
-          enthusiasts one place to find recipes, learn the techniques behind them, and share
-          what they cook with people who care about it.
+          FoodFusion exists so home cooks can publish what they actually make, explain the
+          technique behind it, and find each other.
         </p>
         <p class="mission-body">
-          A recipe tells you what to do. It rarely tells you why the couscous is steamed three
-          times instead of once, or why your grandmother added that extra pinch of saffron.
-          We built FoodFusion for that second half &mdash; the context, the tips and the stories
-          that turn a set of instructions into something worth cooking again.
+          Every recipe is written by a member, tested in a home kitchen, and free to read.
         </p>
         <div class="mission-actions">
-          <a href="recipes.php" class="btn btn-primary">Explore the recipes</a>
-          <a href="about.php" class="btn btn-ghost">More about us &rarr;</a>
+          <a href="about.php" class="btn btn-primary">About FoodFusion</a>
+          <a href="about.php" class="btn btn-ghost">Meet the team</a>
         </div>
       </div>
 
-      <ul class="mission-values">
+      <ul class="mission-stats">
         <li>
-          <span class="mission-value-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18" style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
-          </span>
-          <div>
-            <strong>Authenticity</strong>
-            <p>Recipes come from real kitchens and real cooks, not generic reformulations.</p>
-          </div>
+          <strong><?php echo number_format($statRecipeCount); ?></strong>
+          <span>Published recipes</span>
         </li>
         <li>
-          <span class="mission-value-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18" style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c.6-3.4 3.2-5.5 6.5-5.5s5.9 2.1 6.5 5.5"/><circle cx="17.5" cy="9" r="2.4"/><path d="M15.8 14.6c2.6.2 4.6 2.1 5.1 5"/></svg>
-          </span>
-          <div>
-            <strong>Community</strong>
-            <p>The best tip in the comments usually beats the one in the recipe itself.</p>
-          </div>
+          <strong><?php echo number_format($statMemberCount); ?></strong>
+          <span>Members</span>
         </li>
         <li>
-          <span class="mission-value-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18" style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20V10M12 10L6 6M12 10l6-4M4 6l8-4 8 4"/></svg>
-          </span>
-          <div>
-            <strong>Learning</strong>
-            <p>Every cook started as a beginner &mdash; nothing here assumes otherwise.</p>
-          </div>
+          <strong><?php echo number_format($statPostedThisWeek); ?></strong>
+          <span>Posted this week</span>
         </li>
-        <li>
-          <span class="mission-value-icon">
-            <svg viewBox="0 0 24 24" width="18" height="18" style="width:18px;height:18px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-          </span>
-          <div>
-            <strong>Accessibility</strong>
-            <p>Free to browse, free to join, free to share &mdash; no paywall on a family recipe.</p>
-          </div>
+        <li class="mission-stat-accent">
+          <strong><?php echo number_format($statUpcomingEventCount); ?></strong>
+          <span>Upcoming events</span>
         </li>
       </ul>
     </div>
@@ -496,31 +607,22 @@ require_once 'includes/header.php';
         $featureImg = !empty($feature['image_url']) ? $feature['image_url'] : placeholder_img('recipe-' . $feature['recipe_id'], 900, 700);
       ?>
       <a href="recipe-detail.php?id=<?php echo (int) $feature['recipe_id']; ?>" class="kitchen-feature">
-        <div class="visual-bg"><img src="<?php echo htmlspecialchars($featureImg); ?>" alt="<?php echo htmlspecialchars($feature['recipe_name']); ?>" loading="lazy"></div>
-        <div class="scrim"></div>
-        <div class="kitchen-feature-body">
-          <div class="kitchen-badges">
-            <span class="badge badge-solid">Featured Recipe</span>
-            <span class="badge"><?php echo (int) $feature['prep_time']; ?> min</span>
-          </div>
-          <h3><?php echo htmlspecialchars($feature['recipe_name']); ?></h3>
-          <p><?php echo htmlspecialchars($feature['description']); ?></p>
-          <span class="news-link" style="color: var(--saffron); font-weight: 600; display: inline-block; margin-top: 14px;">View Recipe &rarr;</span>
-        </div>
+        <div class="kitchen-feature-photo"><img src="<?php echo htmlspecialchars($featureImg); ?>" alt="<?php echo htmlspecialchars($feature['recipe_name']); ?>" loading="lazy"></div>
+        <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($feature['category_name']); ?> &middot; <?php echo htmlspecialchars(relative_day_label($feature['created_at'])); ?></span>
+        <h3><?php echo htmlspecialchars($feature['recipe_name']); ?></h3>
+        <p><?php echo htmlspecialchars($feature['description']); ?></p>
+        <span class="kitchen-card-flat-cta">View recipe &rarr;</span>
       </a>
 
       <div class="kitchen-side">
-        <?php if (isset($recentRecipes[1])): $second = $recentRecipes[1]; ?>
+        <?php if (isset($recentRecipes[1])): $second = $recentRecipes[1];
+          $secondImg = !empty($second['image_url']) ? $second['image_url'] : placeholder_img('recipe-' . $second['recipe_id'], 500, 360);
+        ?>
         <a href="recipe-detail.php?id=<?php echo (int) $second['recipe_id']; ?>" class="kitchen-card">
-          <span class="badge" style="align-self: flex-start; background: rgba(31,90,61,0.08); color: var(--zellige-deep); border-color: rgba(31,90,61,0.15);">Just Added</span>
+          <div class="kitchen-card-photo"><img src="<?php echo htmlspecialchars($secondImg); ?>" alt="<?php echo htmlspecialchars($second['recipe_name']); ?>" loading="lazy"></div>
+          <span class="kitchen-card-flat-meta"><?php echo htmlspecialchars($second['category_name']); ?> &middot; <?php echo htmlspecialchars(relative_day_label($second['created_at'])); ?></span>
           <h3><?php echo htmlspecialchars($second['recipe_name']); ?></h3>
           <p><?php echo htmlspecialchars($second['description']); ?></p>
-          <div class="author-row">
-            <span class="cuisine-avatar" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 3v8a2 2 0 002 2h0a2 2 0 002-2V3"/><path d="M9 13v8"/><path d="M17 3c-1.5 2-2 4-2 6s.5 3 2 3v9"/></svg>
-            </span>
-            <span class="author-name"><?php echo htmlspecialchars($second['cuisine_name']); ?> cuisine</span>
-          </div>
         </a>
         <?php endif; ?>
 
@@ -548,8 +650,8 @@ require_once 'includes/header.php';
   <div class="wrap">
     <div class="section-head">
       <div>
-        <span class="eyebrow">Popular this month</span>
-        <h2>Recipes members keep coming back to</h2>
+        <span class="eyebrow">Community Favorites</span>
+        <h2>Recipes members save again and again</h2>
       </div>
     </div>
 
@@ -588,24 +690,66 @@ require_once 'includes/header.php';
   </div>
 </section>
 
+<?php if ($featuredRecipes): ?>
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <div>
+        <span class="eyebrow">Featured</span>
+        <h2>Recipes we think you'll love</h2>
+      </div>
+    </div>
+
+    <div class="recipe-grid">
+      <?php foreach ($featuredRecipes as $recipe):
+        $img = !empty($recipe['image_url']) ? $recipe['image_url'] : placeholder_img('recipe-' . $recipe['recipe_id'], 500, 400);
+      ?>
+        <article class="recipe-grid-card">
+          <div class="recipe-grid-photo">
+            <img src="<?php echo htmlspecialchars($img); ?>" alt="<?php echo htmlspecialchars($recipe['recipe_name']); ?>" loading="lazy">
+            <span class="badge"><?php echo htmlspecialchars($recipe['difficulty_name']); ?></span>
+          </div>
+          <div class="recipe-grid-body">
+            <span class="recipe-grid-meta"><?php echo (int) $recipe['prep_time'] + (int) $recipe['cook_time']; ?> min total</span>
+            <h3><?php echo htmlspecialchars($recipe['recipe_name']); ?></h3>
+            <p><?php echo htmlspecialchars($recipe['description']); ?></p>
+            <a href="recipe-detail.php?id=<?php echo (int) $recipe['recipe_id']; ?>" class="btn btn-ghost">View recipe &rarr;</a>
+          </div>
+        </article>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</section>
+<?php endif; ?>
+
 <section class="section section-dark" id="events">
   <div class="wrap">
     <div class="section-head">
       <div>
         <span class="eyebrow">Don't miss out</span>
-        <h2>Upcoming cooking events</h2>
+        <h2>Upcoming events</h2>
       </div>
-      <?php if (!empty($_SESSION['user_id'])): ?>
-        <button type="button" class="btn btn-primary" id="addEventToggle" aria-expanded="false" aria-controls="addEventPanel">
-          <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Add new event
-        </button>
-      <?php else: ?>
-        <button type="button" class="btn btn-primary" data-open-modal="loginModal" title="Log in to add an event">
-          <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-          Add new event
-        </button>
-      <?php endif; ?>
+      <div class="events-head-actions">
+        <?php if (!empty($_SESSION['user_id'])): ?>
+          <button type="button" class="btn btn-primary" id="addEventToggle" aria-expanded="false" aria-controls="addEventPanel">
+            <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Add new event
+          </button>
+        <?php else: ?>
+          <button type="button" class="btn btn-primary" data-open-modal="loginModal" title="Log in to add an event">
+            <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Add new event
+          </button>
+        <?php endif; ?>
+        <div class="carousel-controls events-head-arrows">
+          <button type="button" class="carousel-btn" id="carouselPrev" aria-label="Previous events">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button type="button" class="carousel-btn" id="carouselNext" aria-label="Next events">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+      </div>
     </div>
 
     <?php if ($eventSuccess): ?>
@@ -662,18 +806,18 @@ require_once 'includes/header.php';
           <article class="event-card-v2">
             <div class="event-photo">
               <img src="<?php echo htmlspecialchars($eImg); ?>" alt="<?php echo htmlspecialchars($event['event_title']); ?>" loading="lazy">
-              <span class="event-date-chip">
-                <span class="day"><?php echo htmlspecialchars(date('d', $ts)); ?></span>
-                <span class="mon"><?php echo htmlspecialchars(date('M', $ts)); ?></span>
-              </span>
             </div>
             <div class="event-card-v2-body">
+              <span class="event-meta-line"><?php echo htmlspecialchars(date('j M', $ts)); ?> &middot; <?php echo htmlspecialchars($event['event_location']); ?></span>
               <h3><?php echo htmlspecialchars($event['event_title']); ?></h3>
-              <span class="event-loc"><?php echo htmlspecialchars($event['event_location']); ?></span>
+              <p><?php echo htmlspecialchars(mb_strimwidth((string) ($event['description'] ?? ''), 0, 90, '…')); ?></p>
               <?php
                 $peopleInfo = $eventPeople[$event['event_id']] ?? [];
                 $goingCount = $peopleInfo['count'] ?? 0;
-                $organizerName = $peopleInfo['organizer'] ?? '';
+                // Events added before organizer tracking existed have no
+                // EVENT_PARTICIPANT row on file — fall back to a neutral
+                // label instead of leaving "Organized by" off entirely.
+                $organizerName = $peopleInfo['organizer'] ?? 'the FoodFusion team';
                 $isOrganizer = in_array((int) $event['event_id'], $myOrganizedEventIds, true);
                 $hasJoined = in_array((int) $event['event_id'], $myJoinedEventIds, true);
               ?>
@@ -681,7 +825,6 @@ require_once 'includes/header.php';
                 <span class="event-going-count"><?php echo (int) $goingCount; ?> going</span>
               <?php endif; ?>
               <button type="button" class="btn btn-outline event-detail-btn"
-                      style="border-color: rgba(31,90,61,0.3); color: var(--zellige-deep);"
                       data-event-id="<?php echo (int) $event['event_id']; ?>"
                       data-event-title="<?php echo htmlspecialchars($event['event_title']); ?>"
                       data-event-date="<?php echo htmlspecialchars(date('l j F Y', $ts)); ?>"
@@ -695,20 +838,11 @@ require_once 'includes/header.php';
                       data-has-joined="<?php echo $hasJoined ? '1' : '0'; ?>"
                       data-is-organizer="<?php echo $isOrganizer ? '1' : '0'; ?>"
                       data-logged-in="<?php echo empty($_SESSION['user_id']) ? '0' : '1'; ?>">
-                View details
+                Details
               </button>
             </div>
           </article>
         <?php endforeach; ?>
-      </div>
-
-      <div class="carousel-controls">
-        <button type="button" class="carousel-btn" id="carouselPrev" aria-label="Previous events">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg>
-        </button>
-        <button type="button" class="carousel-btn" id="carouselNext" aria-label="Next events">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
-        </button>
       </div>
     </div>
   </div>
@@ -758,27 +892,41 @@ require_once 'includes/header.php';
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <img id="eventModalImage" class="event-modal-image" src="" alt="">
-    <h2 id="eventModalTitle"></h2>
-    <div class="event-modal-meta">
-      <span id="eventModalDate"></span>
-      <span id="eventModalLocation"></span>
+    <div class="event-modal-body">
+      <h2 id="eventModalTitle"></h2>
+      <div class="event-modal-meta">
+        <span id="eventModalDate"></span>
+        <span id="eventModalLocation"></span>
+      </div>
+      <p id="eventModalDescription" class="event-modal-description"></p>
+
+      <p id="eventModalPeople" class="event-modal-people"></p>
+
+      <form method="POST" action="index.php#events" id="eventJoinForm" style="display:none;">
+        <input type="hidden" name="action" value="toggle_participation">
+        <input type="hidden" name="event_id" id="eventJoinEventId" value="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+        <button type="submit" id="eventJoinBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Join this event</button>
+      </form>
+      <a href="#" data-open-modal="loginModal" id="eventJoinLoginPrompt" class="btn btn-primary" style="display:none; width:100%; margin-top:6px; justify-content:center;">Log in to join this event</a>
+
+      <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:10px; width:100%; justify-content:center;">
+        <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+        Edit this event
+      </button>
+
+      <form method="POST" action="index.php#events" id="eventDeleteForm"
+            data-confirm="Delete this event? Everyone's RSVP will be removed too. This can't be undone."
+            style="display:none; margin-top:8px;">
+        <input type="hidden" name="action" value="delete_event">
+        <input type="hidden" name="event_id" id="eventDeleteEventId" value="">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+        <button type="submit" class="delete-recipe-btn" style="width:100%; justify-content:center;">
+          <svg viewBox="0 0 24 24" width="16" height="16" style="width:16px;height:16px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m2 0v13a2 2 0 01-2 2H8a2 2 0 01-2-2V7h12z"/></svg>
+          Delete this event
+        </button>
+      </form>
     </div>
-    <p id="eventModalDescription" class="event-modal-description"></p>
-
-    <p id="eventModalPeople" class="event-modal-people"></p>
-
-    <form method="POST" action="index.php#events" id="eventJoinForm" style="display:none;">
-      <input type="hidden" name="action" value="toggle_participation">
-      <input type="hidden" name="event_id" id="eventJoinEventId" value="">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
-      <button type="submit" id="eventJoinBtn" class="btn btn-primary" style="width:100%; margin-top:6px;">Join this event</button>
-    </form>
-    <a href="#" data-open-modal="loginModal" id="eventJoinLoginPrompt" class="btn btn-primary" style="display:none; width:100%; margin-top:6px; justify-content:center;">Log in to join this event</a>
-
-    <button type="button" id="eventModalEditBtn" class="btn btn-outline" style="display:none; margin-top:10px; width:100%; justify-content:center;">
-      <svg viewBox="0 0 24 24" width="15" height="15" style="width:15px;height:15px;flex-shrink:0;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
-      Edit this event
-    </button>
   </div>
 </div>
 

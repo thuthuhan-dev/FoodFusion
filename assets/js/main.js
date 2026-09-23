@@ -79,6 +79,28 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape' && document.querySelector('.modal-overlay.open')) closeAllModals();
   });
 
+  /* Infographic lightbox (Educational Resources) — click a card's photo
+     to see it enlarged, reusing the same modal open/close machinery as
+     the auth and event modals above. */
+  document.querySelectorAll('.infographic-trigger').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var card = btn.closest('.infographic-card');
+      var img = btn.querySelector('img');
+      var title = card ? card.querySelector('.infographic-card-body h3') : null;
+      var desc = card ? card.querySelector('.infographic-card-body p') : null;
+
+      var modalImg = document.getElementById('infographicModalImage');
+      var modalTitle = document.getElementById('infographicModalTitle');
+      var modalDesc = document.getElementById('infographicModalDescription');
+
+      if (modalImg && img) { modalImg.src = img.src; modalImg.alt = img.alt; }
+      if (modalTitle) modalTitle.textContent = title ? title.textContent : '';
+      if (modalDesc) modalDesc.textContent = desc ? desc.textContent : '';
+
+      openModalById('infographicModal');
+    });
+  });
+
   /* Repeatable "add another step" rows — used by the Community Cookbook
      composers (Cooking Tip / Culinary Experience) and the Edit Post form.
      Not delegated: the buttons this targets are all present at page load
@@ -93,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var input = document.createElement('input');
       input.type = 'text';
       input.name = 'step[]';
+      input.maxLength = 500;
       input.placeholder = 'Next step';
       row.appendChild(input);
       container.appendChild(row);
@@ -284,16 +307,19 @@ document.addEventListener('DOMContentLoaded', function () {
     var pick = e.target.closest('.ingredient-pick');
     if (!pick) return;
     var nameInput = pick.querySelector('.ingredient-new-name');
+    var descInput = pick.querySelector('.ingredient-new-description');
     if (!nameInput) return;
 
     if (e.target.value === '__new__') {
       e.target.style.display = 'none';
       nameInput.style.display = '';
+      if (descInput) descInput.style.display = '';
       nameInput.focus();
     } else {
       e.target.style.display = '';
       nameInput.style.display = 'none';
       nameInput.value = '';
+      if (descInput) { descInput.style.display = 'none'; descInput.value = ''; }
     }
   });
 
@@ -306,6 +332,8 @@ document.addEventListener('DOMContentLoaded', function () {
       clone.querySelectorAll('input').forEach(function (i) { i.value = ''; });
       var clonedNameInput = clone.querySelector('.ingredient-new-name');
       if (clonedNameInput) clonedNameInput.style.display = 'none';
+      var clonedDescInput = clone.querySelector('.ingredient-new-description');
+      if (clonedDescInput) clonedDescInput.style.display = 'none';
       ingredientRows.appendChild(clone);
       var sel = clone.querySelector('select');
       if (sel) sel.focus();
@@ -347,6 +375,8 @@ document.addEventListener('DOMContentLoaded', function () {
       row.querySelectorAll('select').forEach(function (s) { s.selectedIndex = 0; s.style.display = ''; });
       var nameField = row.querySelector('.ingredient-new-name');
       if (nameField) nameField.style.display = 'none';
+      var descField = row.querySelector('.ingredient-new-description');
+      if (descField) descField.style.display = 'none';
     }
     renumberSteps();
   });
@@ -452,6 +482,14 @@ document.addEventListener('DOMContentLoaded', function () {
           } : null;
         }
 
+        var eventDeleteForm = document.getElementById('eventDeleteForm');
+        var eventDeleteEventId = document.getElementById('eventDeleteEventId');
+        if (eventDeleteForm) {
+          var canDelete = btn.getAttribute('data-can-edit') === '1';
+          eventDeleteForm.style.display = canDelete ? 'block' : 'none';
+          if (canDelete) eventDeleteEventId.value = btn.getAttribute('data-event-id') || '';
+        }
+
         // Organizer name + headcount, and the Join / Leave control.
         var organizerName = btn.getAttribute('data-organizer-name') || '';
         var goingCount = parseInt(btn.getAttribute('data-going-count') || '0', 10);
@@ -460,10 +498,17 @@ document.addEventListener('DOMContentLoaded', function () {
         var loggedIn = btn.getAttribute('data-logged-in') === '1';
 
         var peopleEl = document.getElementById('eventModalPeople');
-        var peopleParts = [];
-        if (organizerName) peopleParts.push('Organized by ' + organizerName);
-        peopleParts.push(goingCount + (goingCount === 1 ? ' person going' : ' people going'));
-        peopleEl.textContent = peopleParts.join(' \u00b7 ');
+        peopleEl.textContent = '';
+        if (organizerName) {
+          var organizerEl = document.createElement('strong');
+          organizerEl.className = 'event-modal-organizer';
+          organizerEl.textContent = 'Organized by ' + organizerName;
+          peopleEl.appendChild(organizerEl);
+          peopleEl.appendChild(document.createTextNode(' \u00b7 '));
+        }
+        peopleEl.appendChild(document.createTextNode(
+          goingCount + (goingCount === 1 ? ' person going' : ' people going')
+        ));
 
         var joinForm = document.getElementById('eventJoinForm');
         var joinBtn = document.getElementById('eventJoinBtn');
@@ -531,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (nextEl) nextEl.addEventListener('click', function () { advance(); restart(); });
 
     var timer = null;
-    function start() { timer = setInterval(advance, 4500); }
+    function start() { timer = setInterval(advance, 7000); }
     function stop() { if (timer) clearInterval(timer); }
     function restart() { stop(); start(); }
 
@@ -573,11 +618,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var heroIndex = 0;
   var heroTimer = null;
 
+  var heroCounter = document.getElementById('heroSlideCounter');
+
   function showHeroSlide(i) {
     if (!heroSlides.length) return;
     heroIndex = (i + heroSlides.length) % heroSlides.length;
     heroSlides.forEach(function (s, idx) { s.classList.toggle('active', idx === heroIndex); });
     heroDots.forEach(function (d, idx) { d.classList.toggle('active', idx === heroIndex); });
+    if (heroCounter) heroCounter.textContent = heroIndex + 1;
   }
 
   function startHeroAutoplay() {
