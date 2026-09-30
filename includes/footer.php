@@ -69,11 +69,11 @@
 </div>
 
 <script src="assets/js/main.js?v=<?php echo @filemtime(__DIR__ . '/../assets/js/main.js') ?: time(); ?>"></script>
-<?php if ($authOpenModal === 'login' || $authOpenModal === 'join'): ?>
+<?php if ($authOpenModal === 'login' || $authOpenModal === 'join' || $authOpenModal === 'reset'): ?>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     if (window.openModalById) {
-      window.openModalById('<?php echo $authOpenModal === 'join' ? 'joinModal' : 'loginModal'; ?>');
+      window.openModalById('<?php echo $authOpenModal === 'join' ? 'joinModal' : ($authOpenModal === 'reset' ? 'resetPasswordModal' : 'loginModal'); ?>');
     }
   });
 </script>

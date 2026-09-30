@@ -29,6 +29,19 @@ unset($_SESSION['auth_error']);
 $authOld = $_SESSION['auth_old'] ?? [];
 unset($_SESSION['auth_old']);
 
+// Flash state from reset-password.php — same pattern as login/register,
+// its own modal reopens with the result instead of rendering a page.
+// Two separate messages, like the login modal's auth-error/auth-success:
+// $resetError is a real problem (bad CSRF, malformed email); $resetMessage
+// is the deliberately noncommittal "request processed" text shown whether
+// or not that email has an account, so the two are never conflated.
+$resetError = $_SESSION['reset_error'] ?? null;
+unset($_SESSION['reset_error']);
+$resetMessage = $_SESSION['reset_message'] ?? null;
+unset($_SESSION['reset_message']);
+$resetOld = $_SESSION['reset_old'] ?? [];
+unset($_SESSION['reset_old']);
+
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!DOCTYPE html>
@@ -185,6 +198,36 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
       <button type="submit" class="btn btn-primary btn-block">Log in</button>
     </form>
 
+    <p class="modal-switch">Forgot your password? <a href="#" data-open-modal="resetPasswordModal">Reset it</a></p>
     <p class="modal-switch">New to FoodFusion? <a href="#" data-open-modal="joinModal">Create an account</a></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetPasswordModal" role="dialog" aria-modal="true" aria-labelledby="resetPasswordModalTitle">
+  <div class="modal">
+    <button type="button" class="modal-close" data-close-modal aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="modal-brand">
+      <h2 id="resetPasswordModalTitle">Reset your password</h2>
+      <p class="modal-sub">This project can't send a reset link by email, so a request resets your account straight to a fixed default password instead.</p>
+    </div>
+
+    <form action="reset-password.php" method="POST" id="resetPasswordForm">
+      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+      <?php if ($resetMessage && $authOpenModal === 'reset'): ?>
+        <div class="auth-success"><?php echo htmlspecialchars($resetMessage); ?></div>
+      <?php endif; ?>
+      <?php if ($resetError && $authOpenModal === 'reset'): ?>
+        <div class="auth-error"><?php echo htmlspecialchars($resetError); ?></div>
+      <?php endif; ?>
+      <div class="field">
+        <label for="reset_email">Email</label>
+        <input type="email" id="reset_email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($resetOld['email'] ?? ''); ?>">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Reset password</button>
+    </form>
+
+    <p class="modal-switch">Remembered it after all? <a href="#" data-open-modal="loginModal">Log in</a></p>
   </div>
 </div>
