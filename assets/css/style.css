@@ -3488,18 +3488,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 
 .modal.modal-shield {
   max-width: 420px;
-  padding: 7px;
-  background: var(--ink);
+  padding: 0;
+  background: var(--white);
   border-top: none;
-  overflow: visible;
-  clip-path: polygon(26px 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%, 0 26px);
+  border-radius: 22px;
+  overflow: hidden;
 }
 
 .modal-shield-inner {
   position: relative;
   background: var(--white);
-  padding: 46px 30px 30px;
-  clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%, 0 20px);
+  padding: 44px 30px 30px;
 }
 
 .modal-shield .modal-close {
