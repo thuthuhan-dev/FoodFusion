@@ -61,10 +61,7 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
 
 <header class="site-header">
   <div class="wrap nav">
-    <a href="index.php" class="brand">
-      <img src="assets/img/logo.svg" alt="" class="brand-mark" width="34" height="34">
-      FoodFusion
-    </a>
+    <a href="index.php" class="brand"><span class="brand-food">Food</span><span class="brand-fusion">Fusion</span></a>
 
     <div class="nav-top-right">
       <form class="site-search" action="recipes.php" method="GET">
@@ -124,8 +121,6 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <div class="modal-brand">
-      <img src="assets/img/logo.svg" alt="" class="modal-brand-mark">
-      <span class="modal-eyebrow">Homepage only</span>
       <h2 id="joinModalTitle">Join Us</h2>
       <p class="modal-sub">Save favourites, share recipes, and join the community cookbook.</p>
     </div>
@@ -174,7 +169,6 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <div class="modal-brand">
-      <img src="assets/img/logo.svg" alt="" class="modal-brand-mark">
       <span class="modal-eyebrow">Welcome back</span>
       <h2 id="loginModalTitle">Log in</h2>
       <p class="modal-sub">Log in to pick up where you left off.</p>
@@ -215,7 +209,6 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
     <div class="modal-brand">
-      <img src="assets/img/logo.svg" alt="" class="modal-brand-mark">
       <span class="modal-eyebrow">Account recovery</span>
       <h2 id="resetPasswordModalTitle">Reset your password</h2>
       <p class="modal-sub">This project can't send a reset link by email, so a request resets your account straight to a fixed default password instead.</p>
