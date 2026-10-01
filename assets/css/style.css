@@ -3473,7 +3473,9 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 
 /* =======================================================
-   Auth modals — Join Us / Log in redesign
+   Auth modals — "shield" design: a notched-corner charcoal frame,
+   a white inset card, a circular brick-red icon badge, and
+   pill-shaped inputs with a left icon chip.
    ======================================================= */
 
 .modal {
@@ -3484,41 +3486,48 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 #joinModal .modal { border-top-color: var(--saffron); }
 
-/* Header block at the top of each auth modal — a textured plaster
-   banner (the same diamond motif used on page headers) instead of
-   plain white, so the modal reads as a considered space rather than
-   a bare form dropped on the page. */
-.modal-brand {
+.modal.modal-shield {
+  max-width: 420px;
+  padding: 7px;
+  background: var(--ink);
+  border-top: none;
+  overflow: visible;
+  clip-path: polygon(26px 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 0 100%, 0 26px);
+}
+
+.modal-shield-inner {
   position: relative;
-  overflow: hidden;
-  padding: 34px 32px 26px;
-  text-align: left;
-  color: var(--ink);
-  background: var(--plaster-deep);
-  border-bottom: 1px solid rgba(25, 25, 25, 0.08);
+  background: var(--white);
+  padding: 46px 30px 30px;
+  clip-path: polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 0 100%, 0 20px);
 }
-.modal-brand::before {
-  content: "";
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84' viewBox='0 0 84 84'%3E%3Cg fill='none' stroke='%23b3372b' stroke-opacity='0.1' stroke-width='1.2'%3E%3Cpath d='M42 2 L82 42 L42 82 L2 42 Z'/%3E%3Cpath d='M42 2 L62 22 L42 42 L22 22 Z'/%3E%3Cpath d='M42 82 L62 62 L42 42 L22 62 Z'/%3E%3Cpath d='M2 42 L22 22 L42 42 L22 62 Z'/%3E%3Cpath d='M82 42 L62 22 L42 42 L62 62 Z'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 84px 84px;
-  pointer-events: none;
+
+.modal-shield .modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
 }
-.modal-brand > * { position: relative; }
-.modal-eyebrow {
-  display: block;
-  font-family: var(--font-body);
-  font-weight: 700;
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
+
+.modal-shield-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--saffron);
+  color: var(--white);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 16px;
+  box-shadow: 0 8px 18px -6px rgba(179, 55, 43, 0.55);
+}
+.modal-shield-badge svg { width: 26px; height: 26px; }
+
+.modal-shield-title {
+  text-align: center;
   text-transform: uppercase;
-  color: var(--saffron);
-  margin-bottom: 10px;
-}
-.modal-brand h2 {
-  color: var(--ink);
-  font-size: 1.75rem;
+  letter-spacing: 0.03em;
+  font-size: 1.4rem;
   font-weight: 700;
+  color: var(--ink);
   margin: 0 0 8px;
 }
 .modal-sub {
@@ -3526,19 +3535,62 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   line-height: 1.55;
   color: var(--ink-soft);
   margin: 0;
-  max-width: 34ch;
+}
+.modal-shield-inner .modal-sub {
+  text-align: center;
+  max-width: none;
+  margin: 0 auto 24px;
 }
 
-/* The form body sits below the header block */
-.modal form { padding: 26px 32px 0; }
-.modal .modal-switch { padding: 0 32px 26px; margin-top: 20px; }
-.modal .form-note { padding-inline: 0; }
+.modal-shield-inner form { padding: 0; }
 
-.modal-close {
-  color: var(--ink-soft);
-  z-index: 3;
+/* Pill-shaped input with a left icon chip, replacing the plain boxed
+   .field input just for these three modals. */
+.pill-input {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1.5px solid rgba(25, 25, 25, 0.18);
+  background: var(--plaster);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.modal-close:hover { color: var(--ink); }
+.pill-input:focus-within {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(179, 55, 43, 0.16);
+}
+.pill-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  flex-shrink: 0;
+  background: var(--ink);
+  color: var(--white);
+}
+.pill-icon svg { width: 17px; height: 17px; }
+.pill-input input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 12px 16px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+.pill-input.has-toggle input { padding-right: 42px; }
+.pill-input .pw-toggle { right: 6px; }
+
+.modal-shield-forgot {
+  text-align: right;
+  font-size: 0.85rem;
+  margin: -6px 0 18px;
+}
+
+.modal-shield .btn-primary { border-radius: 999px; }
 
 .btn-block { width: 100%; justify-content: center; }
 
@@ -3578,12 +3630,17 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   border-top: 1px solid var(--plaster-deep);
   padding-top: 16px;
 }
+.modal-shield .modal-switch,
+.modal-shield .form-note {
+  text-align: center;
+  border-top: none;
+  padding: 0;
+  margin-top: 18px;
+}
 
 @media (max-width: 460px) {
-  .modal-brand { padding: 22px 22px 0; }
-  .modal-brand h2 { font-size: 1.3rem; }
-  .modal form { padding: 18px 22px 0; }
-  .modal .modal-switch { padding: 0 22px 22px; }
+  .modal-shield-inner { padding: 40px 20px 24px; }
+  .modal-shield-title { font-size: 1.2rem; }
 }
 
 /* .field-row is a flex row (not grid), so it needs flex-direction to
