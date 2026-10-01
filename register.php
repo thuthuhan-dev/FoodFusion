@@ -1,10 +1,8 @@
 <?php
 require_once 'includes/db.php';
-
 // There is only one join FORM in the whole site — the Join Us modal in
 // includes/header.php. This file just processes the submission. See
 // includes/header.php and includes/footer.php for the modal reopen logic.
-
 function fail_join($message, $old) {
     $_SESSION['auth_error'] = $message;
     $_SESSION['auth_old'] = $old;
@@ -68,7 +66,7 @@ try {
 
     $insert = $pdo->prepare(
         'INSERT INTO USERS (first_name, last_name, email, password_hash, role, status)
-         VALUES (?, ?, ?, ?, ?, ?)'
+        VALUES (?, ?, ?, ?, ?, ?)'
     );
     $insert->execute([$firstName, $lastName, $email, $passwordHash, 'Member', 'Active']);
     $newUserId = (int) $pdo->lastInsertId();

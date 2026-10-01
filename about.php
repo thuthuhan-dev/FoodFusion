@@ -20,7 +20,7 @@ require_once 'includes/header.php';
 
 <div class="wrap about-split">
   <div class="media">
-    <img src="assets/img/kitchen.webp" alt="A home kitchen with fresh ingredients">
+    <img src="assets/img/kitchen1.jpg" alt="A home kitchen with fresh ingredients">
   </div>
   <div>
     <span class="eyebrow">Our philosophy</span>

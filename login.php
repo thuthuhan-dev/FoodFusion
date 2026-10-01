@@ -3,17 +3,7 @@ require_once 'includes/db.php';
 
 const MAX_FAILED_ATTEMPTS = 3;
 const LOCKOUT_MINUTES = 3;
-
-// Used only to burn roughly the same bcrypt cost on a nonexistent-email
-// attempt as a real password check costs — see the !$user branch below.
-// Never a real account's hash.
 const DUMMY_PASSWORD_HASH = '$2y$12$OvJAk.ZCiJ6wP5TgOCsRuuFq3eYZl41NKi4C64E19U5NUad/DbIMm';
-
-// There is only one login FORM in the whole site — the Login modal in
-// includes/header.php. This file just processes the submission and sends
-// the person back with either a session (success) or an error (failure).
-// See includes/header.php ($authOpenModal / $authError / $authOld) and
-// includes/footer.php (the script that reopens the modal) for the other half.
 
 function fail_login($message, $email = '') {
     $_SESSION['auth_error'] = $message;
@@ -21,8 +11,6 @@ function fail_login($message, $email = '') {
     header('Location: index.php?auth=login');
     exit;
 }
-
-// A plain visit (no form submitted) — just open the modal, nothing to process.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: index.php?auth=login');
     exit;
@@ -43,22 +31,16 @@ if ($email === '' || $password === '') {
 if (!$pdo) {
     fail_login('The database is not connected right now, so no one can log in. Check includes/db.php.', $email);
 }
-
 try {
     $stmt = $pdo->prepare(
         'SELECT user_id, first_name, last_name, email, password_hash, role,
                 failed_attempts, lockout_until, status
-         FROM USERS WHERE email = ?'
+        FROM USERS WHERE email = ?'
     );
     $stmt->execute([$email]);
     $user = $stmt->fetch();
 
     if (!$user) {
-        // Run a password_verify() anyway, against a hash nothing matches, so
-        // this path takes about as long as a real wrong-password check.
-        // Without it, "email not registered" responds near-instantly while
-        // "wrong password" takes bcrypt's ~100ms, letting someone measuring
-        // response time enumerate which emails have accounts.
         password_verify($password, DUMMY_PASSWORD_HASH);
         fail_login('Invalid email or password.', $email);
     }
@@ -106,7 +88,6 @@ try {
         $_SESSION['role']           = $user['role'];
         $_SESSION['session_log_id'] = $pdo->lastInsertId();
         unset($_SESSION['csrf_token']);
-
         header('Location: index.php');
         exit;
     }

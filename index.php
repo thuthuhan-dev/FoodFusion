@@ -479,7 +479,7 @@ require_once 'includes/header.php';
       'eyebrow' => 'Cook. Share. Belong.',
       'title' => 'Where Culinary Creativity Meets Community.',
       'lede' => 'Discover a world of flavor rooted in Moroccan tradition, share your favourite home-cooked meals, and connect with food enthusiasts who believe every dish tells a story.',
-      'img' => 'assets/img/share.jpg',
+      'img' => 'assets/img/share2.jpg',
       'alt' => 'Moroccan tagine and spices',
       'actions' => [
         ['label' => 'Start Cooking', 'type' => 'modal'],
@@ -487,10 +487,10 @@ require_once 'includes/header.php';
       ],
     ],
     [
-      'eyebrow' => '2,300+ Members',
+      'eyebrow' => 'Many Members',
       'title' => 'Join a Community That Shares Its Table.',
       'lede' => 'Post your own recipes, swap kitchen tips, and follow along as members cook their way through the same dishes — no recipe too simple, no cook too new.',
-      'img' => 'assets/img/cm.jpg',
+      'img' => 'assets/img/cm1.jpg',
       'alt' => 'Fresh herbs and ingredients for a shared meal',
       'actions' => [
         ['label' => "Join Us — it's free", 'type' => 'modal'],
@@ -501,7 +501,7 @@ require_once 'includes/header.php';
       'eyebrow' => 'Live & Online',
       'title' => 'Learn Hands-On at a Cooking Event.',
       'lede' => 'From sourdough masterclasses to spice market tours, book a seat at an upcoming FoodFusion event and cook alongside people who love food as much as you do.',
-      'img' => 'assets/img/k.jpg',
+      'img' => 'assets/img/k1.jpg',
       'alt' => 'Hands-on cooking class in progress',
       'actions' => [
         ['label' => 'See Upcoming Events', 'href' => '#events'],
