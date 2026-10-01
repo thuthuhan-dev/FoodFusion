@@ -29,6 +29,19 @@ unset($_SESSION['auth_error']);
 $authOld = $_SESSION['auth_old'] ?? [];
 unset($_SESSION['auth_old']);
 
+// Flash state from reset-password.php — same pattern as login/register,
+// its own modal reopens with the result instead of rendering a page.
+// Two separate messages, like the login modal's auth-error/auth-success:
+// $resetError is a real problem (bad CSRF, malformed email); $resetMessage
+// is the deliberately noncommittal "request processed" text shown whether
+// or not that email has an account, so the two are never conflated.
+$resetError = $_SESSION['reset_error'] ?? null;
+unset($_SESSION['reset_error']);
+$resetMessage = $_SESSION['reset_message'] ?? null;
+unset($_SESSION['reset_message']);
+$resetOld = $_SESSION['reset_old'] ?? [];
+unset($_SESSION['reset_old']);
+
 $currentPage = basename($_SERVER['SCRIPT_NAME']);
 ?>
 <!DOCTYPE html>
@@ -48,7 +61,7 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
 
 <header class="site-header">
   <div class="wrap nav">
-    <a href="index.php" class="brand">FoodFusion</a>
+    <a href="index.php" class="brand"><span class="brand-food">Food</span><span class="brand-fusion">Fusion</span></a>
 
     <div class="nav-top-right">
       <form class="site-search" action="recipes.php" method="GET">
@@ -103,88 +116,143 @@ $currentPage = basename($_SERVER['SCRIPT_NAME']);
 
 <!-- Join Us modal -->
 <div class="modal-overlay" id="joinModal" role="dialog" aria-modal="true" aria-labelledby="joinModalTitle">
-  <div class="modal">
-    <button type="button" class="modal-close" data-close-modal aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    <div class="modal-brand">
-      <span class="modal-eyebrow">Homepage only</span>
-      <h2 id="joinModalTitle">Join Us</h2>
+  <div class="modal modal-shield">
+    <div class="modal-shield-inner">
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="modal-shield-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <h2 class="modal-shield-title" id="joinModalTitle">Join Us</h2>
       <p class="modal-sub">Save favourites, share recipes, and join the community cookbook.</p>
+
+      <form action="register.php" method="POST" id="joinForm">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+        <?php if ($authError && $authOpenModal === 'join'): ?>
+          <div class="auth-error"><?php echo htmlspecialchars($authError); ?></div>
+        <?php endif; ?>
+        <div class="field-row">
+          <div class="field">
+            <label for="first_name">First name</label>
+            <div class="pill-input">
+              <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg></span>
+              <input type="text" id="first_name" name="first_name" required autocomplete="given-name" value="<?php echo htmlspecialchars($authOld['first_name'] ?? ''); ?>">
+            </div>
+          </div>
+          <div class="field">
+            <label for="last_name">Last name</label>
+            <div class="pill-input">
+              <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg></span>
+              <input type="text" id="last_name" name="last_name" required autocomplete="family-name" value="<?php echo htmlspecialchars($authOld['last_name'] ?? ''); ?>">
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <div class="pill-input">
+            <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+            <input type="email" id="email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($authOld['email'] ?? ''); ?>">
+          </div>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="pill-input has-toggle">
+            <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span>
+            <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
+            <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">
+              <svg viewBox="0 0 24 24" width="17" height="17" style="width:17px;height:17px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <span class="field-hint">At least 8 characters, with one letter and one number.</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Create account</button>
+        <p class="form-note">By joining, you agree to our <a href="privacy-policy.php">Privacy Policy</a> and <a href="cookie-policy.php">Cookie Policy</a>.</p>
+      </form>
+
+      <p class="modal-switch">Already a member? <a href="#" data-open-modal="loginModal">Log in</a></p>
     </div>
-
-    <form action="register.php" method="POST" id="joinForm">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
-      <?php if ($authError && $authOpenModal === 'join'): ?>
-        <div class="auth-error"><?php echo htmlspecialchars($authError); ?></div>
-      <?php endif; ?>
-      <div class="field-row">
-        <div class="field">
-          <label for="first_name">First name</label>
-          <input type="text" id="first_name" name="first_name" required autocomplete="given-name" value="<?php echo htmlspecialchars($authOld['first_name'] ?? ''); ?>">
-        </div>
-        <div class="field">
-          <label for="last_name">Last name</label>
-          <input type="text" id="last_name" name="last_name" required autocomplete="family-name" value="<?php echo htmlspecialchars($authOld['last_name'] ?? ''); ?>">
-        </div>
-      </div>
-      <div class="field">
-        <label for="email">Email</label>
-        <input type="email" id="email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($authOld['email'] ?? ''); ?>">
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="password" name="password" required minlength="8" autocomplete="new-password">
-          <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">
-            <svg viewBox="0 0 24 24" width="17" height="17" style="width:17px;height:17px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
-        </div>
-        <span class="field-hint">At least 8 characters, with one letter and one number.</span>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block">Create account</button>
-      <p class="form-note">By joining, you agree to our <a href="privacy-policy.php">Privacy Policy</a> and <a href="cookie-policy.php">Cookie Policy</a>.</p>
-    </form>
-
-    <p class="modal-switch">Already a member? <a href="#" data-open-modal="loginModal">Log in</a></p>
   </div>
 </div>
 
 <!-- Log in modal -->
 <div class="modal-overlay" id="loginModal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
-  <div class="modal">
-    <button type="button" class="modal-close" data-close-modal aria-label="Close">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
-    </button>
-    <div class="modal-brand">
-      <h2 id="loginModalTitle">Log in</h2>
+  <div class="modal modal-shield">
+    <div class="modal-shield-inner">
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="modal-shield-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.5-7 8-7s8 3 8 7"/></svg>
+      </div>
+      <h2 class="modal-shield-title" id="loginModalTitle">Log in</h2>
       <p class="modal-sub">Log in to pick up where you left off.</p>
-    </div>
 
-    <form action="login.php" method="POST" id="loginForm">
-      <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
-      <?php if (isset($_GET['registered']) && $authOpenModal === 'login'): ?>
-        <div class="auth-success">Account created — log in below to get started.</div>
-      <?php endif; ?>
-      <?php if ($authError && $authOpenModal === 'login'): ?>
-        <div class="auth-error"><?php echo htmlspecialchars($authError); ?></div>
-      <?php endif; ?>
-      <div class="field">
-        <label for="login_email">Email</label>
-        <input type="email" id="login_email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($authOld['email'] ?? ''); ?>">
-      </div>
-      <div class="field">
-        <label for="login_password">Password</label>
-        <div class="pw-wrap">
-          <input type="password" id="login_password" name="password" required autocomplete="current-password">
-          <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">
-            <svg viewBox="0 0 24 24" width="17" height="17" style="width:17px;height:17px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+      <form action="login.php" method="POST" id="loginForm">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+        <?php if (isset($_GET['registered']) && $authOpenModal === 'login'): ?>
+          <div class="auth-success">Account created — log in below to get started.</div>
+        <?php endif; ?>
+        <?php if ($authError && $authOpenModal === 'login'): ?>
+          <div class="auth-error"><?php echo htmlspecialchars($authError); ?></div>
+        <?php endif; ?>
+        <div class="field">
+          <label for="login_email">Email</label>
+          <div class="pill-input">
+            <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+            <input type="email" id="login_email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($authOld['email'] ?? ''); ?>">
+          </div>
         </div>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block">Log in</button>
-    </form>
+        <div class="field">
+          <label for="login_password">Password</label>
+          <div class="pill-input has-toggle">
+            <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg></span>
+            <input type="password" id="login_password" name="password" required autocomplete="current-password">
+            <button type="button" class="pw-toggle" data-pw-toggle aria-label="Show password">
+              <svg viewBox="0 0 24 24" width="17" height="17" style="width:17px;height:17px;" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1.5 12S5 5.5 12 5.5 22.5 12 22.5 12 19 18.5 12 18.5 1.5 12 1.5 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <p class="modal-shield-forgot"><a href="#" data-open-modal="resetPasswordModal">Forgot your password?</a></p>
+        <button type="submit" class="btn btn-primary btn-block">Log in</button>
+      </form>
 
-    <p class="modal-switch">New to FoodFusion? <a href="#" data-open-modal="joinModal">Create an account</a></p>
+      <p class="modal-switch">New to FoodFusion? <a href="#" data-open-modal="joinModal">Create an account</a></p>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetPasswordModal" role="dialog" aria-modal="true" aria-labelledby="resetPasswordModalTitle">
+  <div class="modal modal-shield">
+    <div class="modal-shield-inner">
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <div class="modal-shield-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+      </div>
+      <h2 class="modal-shield-title" id="resetPasswordModalTitle">Reset password</h2>
+      <p class="modal-sub">This project can't send a reset link by email, so a request resets your account straight to a fixed default password instead.</p>
+
+      <form action="reset-password.php" method="POST" id="resetPasswordForm">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+        <?php if ($resetMessage && $authOpenModal === 'reset'): ?>
+          <div class="auth-success"><?php echo htmlspecialchars($resetMessage); ?></div>
+        <?php endif; ?>
+        <?php if ($resetError && $authOpenModal === 'reset'): ?>
+          <div class="auth-error"><?php echo htmlspecialchars($resetError); ?></div>
+        <?php endif; ?>
+        <div class="field">
+          <label for="reset_email">Email</label>
+          <div class="pill-input">
+            <span class="pill-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span>
+            <input type="email" id="reset_email" name="email" required autocomplete="email" value="<?php echo htmlspecialchars($resetOld['email'] ?? ''); ?>">
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Reset password</button>
+      </form>
+
+      <p class="modal-switch">Remembered it after all? <a href="#" data-open-modal="loginModal">Log in</a></p>
+    </div>
   </div>
 </div>

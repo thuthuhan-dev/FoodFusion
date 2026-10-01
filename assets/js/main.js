@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
   /* Password show / hide toggles */
   document.querySelectorAll('[data-pw-toggle]').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      var wrap = btn.closest('.pw-wrap');
+      var wrap = btn.closest('.pw-wrap, .pill-input');
       if (!wrap) return;
       var input = wrap.querySelector('input');
       if (!input) return;
