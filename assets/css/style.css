@@ -172,10 +172,19 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 700;
   color: var(--ink);
+}
+.brand-mark {
+  display: block;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
 }
 
 .nav-top-right {
@@ -3499,7 +3508,14 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
   pointer-events: none;
 }
 .modal-brand > * { position: relative; }
-.modal-brand-mark { display: none; }
+.modal-brand-mark {
+  display: block;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px -6px rgba(25, 25, 25, 0.35);
+}
 .modal-eyebrow {
   display: block;
   font-family: var(--font-body);
@@ -3558,6 +3574,15 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 }
 .pw-toggle:hover { color: var(--zellige-deep); background: var(--plaster); }
 .pw-toggle.showing { color: var(--zellige); }
+
+/* A more "branded" focus ring for just the auth modals — the sitewide
+   .field input:focus-visible outline is the same near-black as the ink
+   text, which barely reads as a focus state at all. */
+.modal .field input:focus-visible,
+.modal .pw-wrap input:focus-visible {
+  outline: 2px solid var(--saffron);
+  outline-offset: 1px;
+}
 
 /* A subtle divider above the "already a member?" line */
 .modal-switch {
