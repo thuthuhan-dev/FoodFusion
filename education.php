@@ -67,12 +67,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_e
     } elseif ($pdo) {
         $title = trim($_POST['title'] ?? '');
         $desc = trim($_POST['description'] ?? '');
-        $videoUrl = trim($_POST['video_url'] ?? '');
+        $typedUrl = trim($_POST['video_url'] ?? '');
 
-        if ($title === '' || mb_strlen($title) > 150) {
+        // A video file is optional — if one is uploaded it takes priority
+        // over a typed link, same as the pasted-URL fallback already used
+        // for a Cooking Tip / Culinary Experience post's image.
+        $videoError = null;
+        $uploadedVideo = handle_video_upload($_FILES['video_file'] ?? null, $videoError);
+        $videoUrl = $uploadedVideo !== null
+            ? $uploadedVideo
+            : (($typedUrl !== '' && filter_var($typedUrl, FILTER_VALIDATE_URL)) ? $typedUrl : '');
+
+        if ($videoError) {
+            $eduErrors['video'] = $videoError;
+        } elseif ($title === '' || mb_strlen($title) > 150) {
             $eduErrors['video'] = 'Give the video a title under 150 characters.';
-        } elseif ($videoUrl === '' || !filter_var($videoUrl, FILTER_VALIDATE_URL)) {
-            $eduErrors['video'] = 'Please provide a valid video link.';
+        } elseif ($videoUrl === '') {
+            $eduErrors['video'] = 'Please provide a video link or upload a video file.';
         } else {
             try {
                 $pdo->prepare('INSERT INTO EDUCATIONAL_VIDEO (user_id, title, description, video_url) VALUES (?, ?, ?, ?)')
@@ -183,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $eduEditErrors['video'] = 'Log in to manage your videos.';
     } elseif ($pdo && $targetId > 0) {
         try {
-            $ownerStmt = $pdo->prepare('SELECT user_id FROM EDUCATIONAL_VIDEO WHERE edu_video_id = ?');
+            $ownerStmt = $pdo->prepare('SELECT user_id, video_url FROM EDUCATIONAL_VIDEO WHERE edu_video_id = ?');
             $ownerStmt->execute([$targetId]);
             $existingVideo = $ownerStmt->fetch();
 
@@ -192,17 +203,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
             } else {
                 $newTitle = trim($_POST['title'] ?? '');
                 $newDesc = trim($_POST['description'] ?? '');
-                $newVideoUrl = trim($_POST['video_url'] ?? '');
+                $typedUrl = trim($_POST['video_url'] ?? '');
 
-                if ($newTitle === '' || mb_strlen($newTitle) > 150) {
+                // A new video file is optional on edit — if none was chosen,
+                // fall back to a changed link, or keep the current video_url
+                // untouched, same as photo replacement on Edit Recipe.
+                $videoError = null;
+                $uploadedVideo = handle_video_upload($_FILES['video_file'] ?? null, $videoError);
+                if ($uploadedVideo !== null) {
+                    $newVideoUrl = $uploadedVideo;
+                } elseif ($typedUrl !== '' && filter_var($typedUrl, FILTER_VALIDATE_URL)) {
+                    $newVideoUrl = $typedUrl;
+                } else {
+                    $newVideoUrl = $existingVideo['video_url'];
+                }
+
+                if ($videoError) {
+                    $eduEditErrors['video'] = $videoError;
+                } elseif ($newTitle === '' || mb_strlen($newTitle) > 150) {
                     $eduEditErrors['video'] = 'Give the video a title under 150 characters.';
-                } elseif ($newVideoUrl === '' || !filter_var($newVideoUrl, FILTER_VALIDATE_URL)) {
-                    $eduEditErrors['video'] = 'Please provide a valid video link.';
+                } elseif ($newVideoUrl === '') {
+                    $eduEditErrors['video'] = 'Please provide a video link or upload a video file.';
                 } else {
                     $pdo->prepare(
                         'UPDATE EDUCATIONAL_VIDEO SET title = ?, description = ?, video_url = ?, updated_at = NOW()
                          WHERE edu_video_id = ? AND user_id = ?'
                     )->execute([$newTitle, $newDesc !== '' ? $newDesc : null, $newVideoUrl, $targetId, $_SESSION['user_id']]);
+
+                    // Old file is only deleted after the update succeeds, and
+                    // only when the stored value actually changed away from it.
+                    if (is_uploaded_video($existingVideo['video_url']) && $existingVideo['video_url'] !== $newVideoUrl) {
+                        delete_uploaded_file($existingVideo['video_url']);
+                    }
 
                     header('Location: education.php?video_updated=1#videos');
                     exit;
@@ -465,7 +497,7 @@ require_once 'includes/header.php';
         <?php if ($eduErrors['video']): ?>
           <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($eduErrors['video']); ?></p>
         <?php endif; ?>
-        <form method="POST" action="education.php#videos">
+        <form method="POST" action="education.php#videos" enctype="multipart/form-data">
           <input type="hidden" name="action" value="add_edu_video">
           <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
           <div class="field">
@@ -478,7 +510,12 @@ require_once 'includes/header.php';
           </div>
           <div class="field">
             <label for="vid_url">Video link</label>
-            <input type="url" id="vid_url" name="video_url" required placeholder="https://youtube.com/...">
+            <input type="url" id="vid_url" name="video_url" placeholder="https://youtube.com/...">
+          </div>
+          <div class="field">
+            <label for="vid_video_file">Or upload a video file</label>
+            <input type="file" id="vid_video_file" name="video_file" accept="video/mp4,video/webm">
+            <span class="field-hint">MP4 or WEBM &middot; max 50 MB &middot; leave the link above empty if you upload one here</span>
           </div>
           <div class="add-recipe-actions">
             <button type="submit" class="btn btn-primary">Add video</button>
@@ -494,6 +531,7 @@ require_once 'includes/header.php';
       <div class="card-grid-3">
         <?php foreach ($eduVideos as $v):
           $isVideoOwner = !empty($_SESSION['user_id']) && (int) $_SESSION['user_id'] === (int) $v['user_id'];
+          $vidIsUploadedVideo = is_uploaded_video($v['video_url']);
         ?>
           <div class="video-card-wrap">
             <a href="<?php echo htmlspecialchars($v['video_url']); ?>" class="video-card" style="color: inherit;">
@@ -512,6 +550,19 @@ require_once 'includes/header.php';
                 <span class="uploader">by <?php echo htmlspecialchars($v['first_name'] . ' ' . $v['last_name']); ?></span>
               </div>
             </a>
+            <?php if ($vidIsUploadedVideo):
+              // download attribute: save the file instead of opening it in a
+              // tab, and give the user a readable filename rather than the
+              // random name the file is stored under.
+              $vidExt = pathinfo($v['video_url'], PATHINFO_EXTENSION);
+              $vidDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $v['title']))) . '.' . $vidExt;
+            ?>
+              <a href="<?php echo htmlspecialchars($v['video_url']); ?>"
+                 download="<?php echo htmlspecialchars($vidDownloadName); ?>"
+                 class="dl-icon" aria-label="Download <?php echo htmlspecialchars($v['title']); ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:17px;height:17px;"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              </a>
+            <?php endif; ?>
             <?php if ($isVideoOwner): ?>
               <button type="button" class="edit-icon-btn" data-toggle-panel="editVideoPanel-<?php echo (int) $v['video_id']; ?>" aria-label="Edit <?php echo htmlspecialchars($v['title']); ?>">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -525,7 +576,8 @@ require_once 'includes/header.php';
               <?php if ($videoOpen && $eduEditErrors['video']): ?>
                 <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($eduEditErrors['video']); ?></p>
               <?php endif; ?>
-              <form method="POST" action="education.php#videos">
+              <?php $vidHasUploadedVideo = is_uploaded_video($v['video_url']); ?>
+              <form method="POST" action="education.php#videos" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit_edu_video">
                 <input type="hidden" name="video_id" value="<?php echo (int) $v['video_id']; ?>">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
@@ -539,7 +591,12 @@ require_once 'includes/header.php';
                 </div>
                 <div class="field">
                   <label for="edit_vid_url_<?php echo (int) $v['video_id']; ?>">Video link</label>
-                  <input type="url" id="edit_vid_url_<?php echo (int) $v['video_id']; ?>" name="video_url" required value="<?php echo htmlspecialchars($v['video_url']); ?>">
+                  <input type="url" id="edit_vid_url_<?php echo (int) $v['video_id']; ?>" name="video_url" value="<?php echo $vidHasUploadedVideo ? '' : htmlspecialchars($v['video_url']); ?>">
+                </div>
+                <div class="field">
+                  <label for="edit_vid_video_file_<?php echo (int) $v['video_id']; ?>">Or upload a new video file</label>
+                  <input type="file" id="edit_vid_video_file_<?php echo (int) $v['video_id']; ?>" name="video_file" accept="video/mp4,video/webm">
+                  <span class="field-hint"><?php echo $vidHasUploadedVideo ? 'Currently using an uploaded video file. ' : ''; ?>Leave both empty to keep the current video. MP4 or WEBM &middot; max 50 MB</span>
                 </div>
                 <div class="add-recipe-actions">
                   <button type="submit" class="btn btn-primary">Save changes</button>

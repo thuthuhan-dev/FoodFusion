@@ -2363,14 +2363,19 @@ p { margin: 0 0 1em; color: var(--ink-soft); }
 .download-card-body { padding: 18px 20px 22px; }
 .download-card-body h3 { font-size: 1.1rem; font-weight: 700; margin: 0 0 5px; }
 .download-card-body span { font-size: 0.83rem; color: var(--ink-soft); }
-.download-card .dl-icon {
+.download-card .dl-icon,
+.video-card-wrap .dl-icon {
   position: absolute;
   top: 14px; right: 14px;
   width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
   background: var(--white); color: var(--zellige);
   box-shadow: var(--shadow-card);
   display: grid; place-items: center;
+  z-index: 3;
 }
+/* On a video card the edit button already owns the top-right corner,
+   so an uploaded video's download button sits top-left instead. */
+.video-card-wrap .dl-icon { left: 14px; right: auto; }
 
 /* Video tutorial cards */
 .video-card {

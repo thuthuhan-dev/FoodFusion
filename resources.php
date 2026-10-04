@@ -71,13 +71,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'add_t
     } elseif ($pdo) {
         $title = trim($_POST['title'] ?? '');
         $desc = trim($_POST['description'] ?? '');
-        $videoUrl = trim($_POST['video_url'] ?? '');
+        $typedUrl = trim($_POST['video_url'] ?? '');
         $duration = (int) ($_POST['duration_minutes'] ?? 0);
 
-        if ($title === '' || mb_strlen($title) > 150) {
+        // A video file is optional — if one is uploaded it takes priority
+        // over a typed link, same as the pasted-URL fallback already used
+        // for a Cooking Tip / Culinary Experience post's image.
+        $videoError = null;
+        $uploadedVideo = handle_video_upload($_FILES['video_file'] ?? null, $videoError);
+        $videoUrl = $uploadedVideo !== null
+            ? $uploadedVideo
+            : (($typedUrl !== '' && filter_var($typedUrl, FILTER_VALIDATE_URL)) ? $typedUrl : '');
+
+        if ($videoError) {
+            $formErrors['tutorial'] = $videoError;
+        } elseif ($title === '' || mb_strlen($title) > 150) {
             $formErrors['tutorial'] = 'Give the tutorial a title under 150 characters.';
-        } elseif ($videoUrl === '' || !filter_var($videoUrl, FILTER_VALIDATE_URL)) {
-            $formErrors['tutorial'] = 'Please provide a valid video link.';
+        } elseif ($videoUrl === '') {
+            $formErrors['tutorial'] = 'Please provide a video link or upload a video file.';
         } elseif ($duration <= 0) {
             $formErrors['tutorial'] = 'Please give the video length in minutes.';
         } else {
@@ -244,7 +255,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
         $editErrors['tutorial'] = 'Log in to manage your tutorials.';
     } elseif ($pdo && $targetId > 0) {
         try {
-            $ownerStmt = $pdo->prepare('SELECT user_id FROM COOKING_TUTORIAL WHERE tutorial_id = ?');
+            $ownerStmt = $pdo->prepare('SELECT user_id, video_url FROM COOKING_TUTORIAL WHERE tutorial_id = ?');
             $ownerStmt->execute([$targetId]);
             $existingTutorial = $ownerStmt->fetch();
 
@@ -253,13 +264,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
             } else {
                 $newTitle = trim($_POST['title'] ?? '');
                 $newDesc = trim($_POST['description'] ?? '');
-                $newVideoUrl = trim($_POST['video_url'] ?? '');
+                $typedUrl = trim($_POST['video_url'] ?? '');
                 $newDuration = (int) ($_POST['duration_minutes'] ?? 0);
 
-                if ($newTitle === '' || mb_strlen($newTitle) > 150) {
+                // A new video file is optional on edit — if none was chosen,
+                // fall back to a changed link, or keep the current video_url
+                // untouched, same as photo replacement on Edit Recipe.
+                $videoError = null;
+                $uploadedVideo = handle_video_upload($_FILES['video_file'] ?? null, $videoError);
+                if ($uploadedVideo !== null) {
+                    $newVideoUrl = $uploadedVideo;
+                } elseif ($typedUrl !== '' && filter_var($typedUrl, FILTER_VALIDATE_URL)) {
+                    $newVideoUrl = $typedUrl;
+                } else {
+                    $newVideoUrl = $existingTutorial['video_url'];
+                }
+
+                if ($videoError) {
+                    $editErrors['tutorial'] = $videoError;
+                } elseif ($newTitle === '' || mb_strlen($newTitle) > 150) {
                     $editErrors['tutorial'] = 'Give the tutorial a title under 150 characters.';
-                } elseif ($newVideoUrl === '' || !filter_var($newVideoUrl, FILTER_VALIDATE_URL)) {
-                    $editErrors['tutorial'] = 'Please provide a valid video link.';
+                } elseif ($newVideoUrl === '') {
+                    $editErrors['tutorial'] = 'Please provide a video link or upload a video file.';
                 } elseif ($newDuration <= 0) {
                     $editErrors['tutorial'] = 'Please give the video length in minutes.';
                 } else {
@@ -267,6 +293,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'edit_
                         'UPDATE COOKING_TUTORIAL SET title = ?, description = ?, video_url = ?, duration_minutes = ?, updated_at = NOW()
                          WHERE tutorial_id = ? AND user_id = ?'
                     )->execute([$newTitle, $newDesc !== '' ? $newDesc : null, $newVideoUrl, $newDuration, $targetId, $_SESSION['user_id']]);
+
+                    // Old file is only deleted after the update succeeds, and
+                    // only when the stored value actually changed away from it.
+                    if (is_uploaded_video($existingTutorial['video_url']) && $existingTutorial['video_url'] !== $newVideoUrl) {
+                        delete_uploaded_file($existingTutorial['video_url']);
+                    }
 
                     header('Location: resources.php?tutorial_updated=1#tutorials');
                     exit;
@@ -678,7 +710,7 @@ require_once 'includes/header.php';
         <?php if ($formErrors['tutorial']): ?>
           <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($formErrors['tutorial']); ?></p>
         <?php endif; ?>
-        <form method="POST" action="resources.php#tutorials">
+        <form method="POST" action="resources.php#tutorials" enctype="multipart/form-data">
           <input type="hidden" name="action" value="add_tutorial">
           <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
           <div class="field">
@@ -689,15 +721,18 @@ require_once 'includes/header.php';
             <label for="tut_description">Description</label>
             <textarea id="tut_description" name="description" placeholder="What does this tutorial cover?"></textarea>
           </div>
-          <div class="field-row">
-            <div class="field">
-              <label for="tut_video">Video link</label>
-              <input type="url" id="tut_video" name="video_url" required placeholder="https://youtube.com/...">
-            </div>
-            <div class="field">
-              <label for="tut_duration">Length (minutes)</label>
-              <input type="number" id="tut_duration" name="duration_minutes" required min="1" max="600">
-            </div>
+          <div class="field">
+            <label for="tut_video">Video link</label>
+            <input type="url" id="tut_video" name="video_url" placeholder="https://youtube.com/...">
+          </div>
+          <div class="field">
+            <label for="tut_video_file">Or upload a video file</label>
+            <input type="file" id="tut_video_file" name="video_file" accept="video/mp4,video/webm">
+            <span class="field-hint">MP4 or WEBM &middot; max 50 MB &middot; leave the link above empty if you upload one here</span>
+          </div>
+          <div class="field">
+            <label for="tut_duration">Length (minutes)</label>
+            <input type="number" id="tut_duration" name="duration_minutes" required min="1" max="600">
           </div>
           <div class="add-recipe-actions">
             <button type="submit" class="btn btn-primary">Add tutorial</button>
@@ -713,6 +748,7 @@ require_once 'includes/header.php';
       <div class="card-grid-3">
         <?php foreach ($tutorials as $t):
           $isTutorialOwner = !empty($_SESSION['user_id']) && (int) $_SESSION['user_id'] === (int) $t['user_id'];
+          $tutIsUploadedVideo = is_uploaded_video($t['video_url']);
         ?>
           <div class="video-card-wrap">
             <a href="<?php echo htmlspecialchars($t['video_url']); ?>" class="video-card" style="color: inherit;">
@@ -732,6 +768,19 @@ require_once 'includes/header.php';
                 <span class="uploader">by <?php echo htmlspecialchars($t['first_name'] . ' ' . $t['last_name']); ?></span>
               </div>
             </a>
+            <?php if ($tutIsUploadedVideo):
+              // download attribute: save the file instead of opening it in a
+              // tab, and give the user a readable filename rather than the
+              // random name the file is stored under.
+              $tutExt = pathinfo($t['video_url'], PATHINFO_EXTENSION);
+              $tutDownloadName = trim(preg_replace('/\s+/', ' ', preg_replace('/[^A-Za-z0-9 _-]/', '', $t['title']))) . '.' . $tutExt;
+            ?>
+              <a href="<?php echo htmlspecialchars($t['video_url']); ?>"
+                 download="<?php echo htmlspecialchars($tutDownloadName); ?>"
+                 class="dl-icon" aria-label="Download <?php echo htmlspecialchars($t['title']); ?>">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="width:17px;height:17px;"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+              </a>
+            <?php endif; ?>
             <?php if ($isTutorialOwner): ?>
               <button type="button" class="edit-icon-btn" data-toggle-panel="editTutorialPanel-<?php echo (int) $t['tutorial_id']; ?>" aria-label="Edit <?php echo htmlspecialchars($t['title']); ?>">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
@@ -745,7 +794,8 @@ require_once 'includes/header.php';
               <?php if ($tutorialOpen && $editErrors['tutorial']): ?>
                 <p class="form-note" style="color: var(--paprika); margin-bottom: 14px;"><?php echo htmlspecialchars($editErrors['tutorial']); ?></p>
               <?php endif; ?>
-              <form method="POST" action="resources.php#tutorials">
+              <?php $tutHasUploadedVideo = is_uploaded_video($t['video_url']); ?>
+              <form method="POST" action="resources.php#tutorials" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="edit_tutorial">
                 <input type="hidden" name="tutorial_id" value="<?php echo (int) $t['tutorial_id']; ?>">
                 <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
@@ -757,15 +807,18 @@ require_once 'includes/header.php';
                   <label for="edit_tut_description_<?php echo (int) $t['tutorial_id']; ?>">Description</label>
                   <textarea id="edit_tut_description_<?php echo (int) $t['tutorial_id']; ?>" name="description"><?php echo htmlspecialchars($t['description']); ?></textarea>
                 </div>
-                <div class="field-row">
-                  <div class="field">
-                    <label for="edit_tut_video_<?php echo (int) $t['tutorial_id']; ?>">Video link</label>
-                    <input type="url" id="edit_tut_video_<?php echo (int) $t['tutorial_id']; ?>" name="video_url" required value="<?php echo htmlspecialchars($t['video_url']); ?>">
-                  </div>
-                  <div class="field">
-                    <label for="edit_tut_duration_<?php echo (int) $t['tutorial_id']; ?>">Length (minutes)</label>
-                    <input type="number" id="edit_tut_duration_<?php echo (int) $t['tutorial_id']; ?>" name="duration_minutes" required min="1" max="600" value="<?php echo (int) $t['duration_minutes']; ?>">
-                  </div>
+                <div class="field">
+                  <label for="edit_tut_video_<?php echo (int) $t['tutorial_id']; ?>">Video link</label>
+                  <input type="url" id="edit_tut_video_<?php echo (int) $t['tutorial_id']; ?>" name="video_url" value="<?php echo $tutHasUploadedVideo ? '' : htmlspecialchars($t['video_url']); ?>">
+                </div>
+                <div class="field">
+                  <label for="edit_tut_video_file_<?php echo (int) $t['tutorial_id']; ?>">Or upload a new video file</label>
+                  <input type="file" id="edit_tut_video_file_<?php echo (int) $t['tutorial_id']; ?>" name="video_file" accept="video/mp4,video/webm">
+                  <span class="field-hint"><?php echo $tutHasUploadedVideo ? 'Currently using an uploaded video file. ' : ''; ?>Leave both empty to keep the current video. MP4 or WEBM &middot; max 50 MB</span>
+                </div>
+                <div class="field">
+                  <label for="edit_tut_duration_<?php echo (int) $t['tutorial_id']; ?>">Length (minutes)</label>
+                  <input type="number" id="edit_tut_duration_<?php echo (int) $t['tutorial_id']; ?>" name="duration_minutes" required min="1" max="600" value="<?php echo (int) $t['duration_minutes']; ?>">
                 </div>
                 <div class="add-recipe-actions">
                   <button type="submit" class="btn btn-primary">Save changes</button>
